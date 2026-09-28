@@ -1,0 +1,134 @@
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import 'package:sqflite/sqflite.dart';
+
+class AppDatabase {
+  Database? _db;
+
+  Future<Database> get database async {
+    if (_db != null) return _db!;
+    _db = await _initDb();
+    return _db!;
+  }
+
+  Future<Database> _initDb() async {
+    final dir = await getApplicationDocumentsDirectory();
+    final path = p.join(dir.path, 'calory.db');
+    return openDatabase(
+      path,
+      version: 1,
+      onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
+      onConfigure: (db) async {
+        await db.execute('PRAGMA foreign_keys = ON');
+      },
+    );
+  }
+
+  Future<void> _onCreate(Database db, int version) async {
+    await db.execute('''
+      CREATE TABLE daily_goals (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        effective_date TEXT NOT NULL,
+        kcal REAL NOT NULL,
+        carbs_g REAL NOT NULL,
+        protein_g REAL NOT NULL,
+        fat_g REAL NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE meals (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date_time TEXT NOT NULL,
+        meal_type TEXT NOT NULL,
+        name TEXT NOT NULL,
+        photo_path TEXT,
+        servings REAL NOT NULL DEFAULT 1.0,
+        source TEXT NOT NULL DEFAULT 'manual',
+        is_deleted INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE food_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        meal_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        weight_g REAL NOT NULL,
+        kcal REAL NOT NULL,
+        carbs_g REAL NOT NULL,
+        protein_g REAL NOT NULL,
+        fat_g REAL NOT NULL,
+        confidence TEXT,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        FOREIGN KEY (meal_id) REFERENCES meals(id) ON DELETE CASCADE
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE llm_profiles (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        display_name TEXT NOT NULL,
+        base_url TEXT NOT NULL,
+        model TEXT NOT NULL,
+        timeout_seconds INTEGER NOT NULL DEFAULT 30,
+        is_active INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE app_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('CREATE INDEX idx_meals_date ON meals(date_time)');
+    await db.execute('CREATE INDEX idx_meals_type ON meals(meal_type)');
+    await db.execute('CREATE INDEX idx_food_items_meal ON food_items(meal_id)');
+    await db.execute('CREATE INDEX idx_daily_goals_date ON daily_goals(effective_date)');
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+  }
+
+  Future<void> close() async {
+    await _db?.close();
+    _db = null;
+  }
+
+  Future<int> rawInsert(String sql, [List<Object?>? arguments]) async {
+    final db = await database;
+    return db.rawInsert(sql, arguments);
+  }
+
+  Future<List<Map<String, dynamic>>> rawQuery(String sql, [List<Object?>? arguments]) async {
+    final db = await database;
+    return db.rawQuery(sql, arguments);
+  }
+
+  Future<int> rawUpdate(String sql, [List<Object?>? arguments]) async {
+    final db = await database;
+    return db.rawUpdate(sql, arguments);
+  }
+
+  Future<int> rawDelete(String sql, [List<Object?>? arguments]) async {
+    final db = await database;
+    return db.rawDelete(sql, arguments);
+  }
+
+  Future<void> execute(String sql, [List<Object?>? arguments]) async {
+    final db = await database;
+    await db.execute(sql, arguments);
+  }
+
+  Future<T> transaction<T>(Future<T> Function() action) async {
+    final db = await database;
+    return db.transaction((_) => action());
+  }
+}

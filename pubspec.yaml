@@ -1,0 +1,56 @@
+name: calory
+description: "食刻 - 本地 AI 食物热量记录 App"
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.13.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # State management
+  flutter_riverpod: ^2.6.1
+
+  # Routing
+  go_router: ^14.6.2
+
+  # Database
+  sqflite: ^2.4.1
+  path_provider: ^2.1.5
+
+  # HTTP
+  dio: ^5.7.0
+
+  # HTTP debug inspector
+  alice: ^1.10.0
+  alice_dio: ^1.3.1
+
+  # Secure storage
+  flutter_secure_storage: ^10.0.0-beta.1
+
+  # Image & camera
+  image_picker: ^1.1.2
+  image: ^4.3.0
+
+  # Permissions
+  permission_handler: ^13.0.2
+
+  # Utilities
+  intl: ^0.20.3
+  share_plus: ^13.3.0
+  path: ^1.9.0
+
+  # Date utilities
+  table_calendar: ^3.1.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  mockito: ^5.4.4
+
+flutter:
+  uses-material-design: true
