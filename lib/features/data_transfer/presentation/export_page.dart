@@ -110,35 +110,39 @@ class _ExportPageState extends ConsumerState<ExportPage> {
       final mealRepo = ref.read(mealRepositoryProvider);
       final goalRepo = ref.read(goalRepositoryProvider);
       final goals = await goalRepo.getAllGoals();
+      final meals = await mealRepo.getAllMeals();
 
-      final List<Map<String, dynamic>> mealsJson = [];
+      final mealsJson = meals.map((meal) => {
+        'id': meal.id,
+        'date_time': meal.dateTime.toIso8601String(),
+        'meal_type': meal.mealType.name,
+        'name': meal.name,
+        'photo_path': meal.photoPath,
+        'servings': meal.servings,
+        'source': meal.source,
+        'is_deleted': false,
+        'created_at': meal.createdAt.toIso8601String(),
+        'updated_at': meal.updatedAt.toIso8601String(),
+        'food_items': meal.foodItems.map((i) => {
+          'id': i.id,
+          'meal_id': i.mealId,
+          'name': i.name,
+          'weight_g': i.weightG,
+          'kcal': i.kcal,
+          'carbs_g': i.carbsG,
+          'protein_g': i.proteinG,
+          'fat_g': i.fatG,
+          'confidence': i.confidence?.name,
+          'sort_order': i.sortOrder,
+        }).toList(),
+      }).toList();
+
       final now = DateTime.now();
-      for (final goal in goals) {
-        final meals = await mealRepo.getMealsByDate(goal.effectiveDate);
-        for (final meal in meals) {
-          mealsJson.add({
-            'id': meal.id,
-            'date_time': meal.dateTime.toIso8601String(),
-            'meal_type': meal.mealType.name,
-            'name': meal.name,
-            'servings': meal.servings,
-            'source': meal.source,
-            'food_items': meal.foodItems.map((i) => {
-              'name': i.name,
-              'weight_g': i.weightG,
-              'kcal': i.kcal,
-              'carbs_g': i.carbsG,
-              'protein_g': i.proteinG,
-              'fat_g': i.fatG,
-            }).toList(),
-          });
-        }
-      }
-
       final exportData = {
         'schema_version': 1,
         'generated_at': now.toIso8601String(),
         'goals': goals.map((g) => {
+          'id': g.id,
           'effective_date': g.effectiveDate.toIso8601String(),
           'kcal': g.kcal,
           'carbs_g': g.carbsG,
@@ -152,10 +156,10 @@ class _ExportPageState extends ConsumerState<ExportPage> {
       final file = File(p.join(dir.path, 'calory_export_${now.millisecondsSinceEpoch}.json'));
       await file.writeAsString(const JsonEncoder.withIndent('  ').convert(exportData));
 
-      await Share.shareXFiles([XFile(file.path)], text: '食刻数据导出');
+      await Share.shareXFiles([XFile(file.path)], text: 'calory export');
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('导出失败: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('export failed: $e')));
       }
     } finally {
       if (mounted) setState(() => _isExporting = false);
@@ -166,18 +170,14 @@ class _ExportPageState extends ConsumerState<ExportPage> {
     setState(() => _isExporting = true);
     try {
       final mealRepo = ref.read(mealRepositoryProvider);
-      final goalRepo = ref.read(goalRepositoryProvider);
-      final goals = await goalRepo.getAllGoals();
+      final meals = await mealRepo.getAllMeals();
 
       final buffer = StringBuffer();
-      buffer.writeln('日期,餐次,餐名,食材名,重量(g),热量(kcal),碳水(g),蛋白质(g),脂肪(g)');
+      buffer.writeln('date_time,meal_type,meal_name,food_name,weight_g,kcal,carbs_g,protein_g,fat_g');
 
-      for (final goal in goals) {
-        final meals = await mealRepo.getMealsByDate(goal.effectiveDate);
-        for (final meal in meals) {
-          for (final item in meal.foodItems) {
-            buffer.writeln('${meal.dateTime.toIso8601String()},${meal.mealType.label},${_csvEscape(meal.name)},${_csvEscape(item.name)},${item.weightG},${item.kcal},${item.carbsG},${item.proteinG},${item.fatG}');
-          }
+      for (final meal in meals) {
+        for (final item in meal.foodItems) {
+          buffer.writeln('${meal.dateTime.toIso8601String()},${meal.mealType.label},${_csvEscape(meal.name)},${_csvEscape(item.name)},${item.weightG},${item.kcal},${item.carbsG},${item.proteinG},${item.fatG}');
         }
       }
 
@@ -186,10 +186,10 @@ class _ExportPageState extends ConsumerState<ExportPage> {
       final file = File(p.join(dir.path, 'calory_export_${now.millisecondsSinceEpoch}.csv'));
       await file.writeAsString(buffer.toString());
 
-      await Share.shareXFiles([XFile(file.path)], text: '食刻数据导出');
+      await Share.shareXFiles([XFile(file.path)], text: 'calory export');
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('导出失败: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('export failed: $e')));
       }
     } finally {
       if (mounted) setState(() => _isExporting = false);

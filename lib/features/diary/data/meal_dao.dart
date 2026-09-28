@@ -51,6 +51,22 @@ class MealDao {
     return result;
   }
 
+  Future<List<Meal>> getAllMeals() async {
+    final mealsRows = await db.rawQuery(
+      'SELECT * FROM meals WHERE is_deleted = 0 ORDER BY date_time',
+    );
+
+    final List<Meal> result = [];
+    for (final row in mealsRows) {
+      final itemsRows = await db.rawQuery(
+        'SELECT * FROM food_items WHERE meal_id = ? ORDER BY sort_order',
+        [row['id']],
+      );
+      result.add(_toDomain(row, itemsRows));
+    }
+    return result;
+  }
+
   Future<Meal?> getMealById(int id) async {
     final rows = await db.rawQuery('SELECT * FROM meals WHERE id = ?', [id]);
     if (rows.isEmpty) return null;

@@ -10,6 +10,7 @@ import '../../diary/domain/meal_type.dart';
 import '../../../app/providers.dart';
 import '../../../app/theme.dart';
 import '../../../core/widgets/states.dart';
+import '../../../core/utils/format_utils.dart';
 
 final recognitionDraftProvider = StateProvider<MealDraft?>((ref) => null);
 
@@ -25,11 +26,14 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
   late double _servings;
   late MealType _mealType;
   late List<FoodItem> _foodItems;
+  late DateTime _selectedDate;
 
   @override
   void initState() {
     super.initState();
     final draft = ref.read(recognitionDraftProvider);
+    final now = DateTime.now();
+    _selectedDate = DateTime(now.year, now.month, now.day, now.hour, now.minute);
     if (draft != null) {
       _nameController = TextEditingController(text: draft.mealName);
       _servings = draft.servings;
@@ -103,7 +107,7 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
               ),
             const SizedBox(height: 16),
 
-            // 餐名 + 份数 + 餐次
+            // Meal name + meal type
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
@@ -112,7 +116,7 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
                     child: TextField(
                       controller: _nameController,
                       decoration: const InputDecoration(
-                        labelText: '餐名',
+                        labelText: 'meal name',
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.zero,
                       ),
@@ -140,6 +144,36 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
                     ),
                   ),
                 ],
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // Date picker
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: _selectDate,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.calendar_today, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '${FormatUtils.formatDateShort(_selectedDate)} ${FormatUtils.formatTime(_selectedDate)}',
+                          style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                      const Icon(Icons.edit_outlined, size: 18),
+                    ],
+                  ),
+                ),
               ),
             ),
 
@@ -381,20 +415,48 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
     );
   }
 
+  Future<void> _selectDate() async {
+    final now = DateTime.now();
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day),
+      firstDate: DateTime(2024, 1, 1),
+      lastDate: now.add(const Duration(days: 365)),
+    );
+    if (pickedDate == null) return;
+    if (!mounted) return;
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: _selectedDate.hour, minute: _selectedDate.minute),
+    );
+    if (pickedTime == null) return;
+    if (mounted) {
+      setState(() {
+        _selectedDate = DateTime(
+          pickedDate.year,
+          pickedDate.month,
+          pickedDate.day,
+          pickedTime.hour,
+          pickedTime.minute,
+        );
+      });
+    }
+  }
+
   void _saveMeal() async {
     final totalKcal = _foodItems.fold(0.0, (sum, item) => sum + item.kcal);
     if (totalKcal <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('热量必须大于 0')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('kcal must be > 0')));
       return;
     }
     if (_nameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('请输入餐名')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('meal name required')));
       return;
     }
 
     final now = DateTime.now();
     final meal = Meal(
-      dateTime: now,
+      dateTime: _selectedDate,
       mealType: _mealType,
       name: _nameController.text.trim(),
       photoPath: ref.read(recognitionDraftProvider)?.photoTempPath,

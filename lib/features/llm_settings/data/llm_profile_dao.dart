@@ -17,17 +17,22 @@ class LlmProfileDao {
   }
 
   Future<int> insertProfile(LlmProfile profile) async {
-    await db.rawUpdate('UPDATE llm_profiles SET is_active = 0 WHERE is_active = 1');
-    return db.rawInsert(
-      'INSERT INTO llm_profiles (display_name, base_url, model, timeout_seconds, is_active) VALUES (?, ?, ?, ?, ?)',
-      [
-        profile.displayName,
-        profile.baseUrl,
-        profile.model,
-        profile.timeoutSeconds,
-        profile.isActive ? 1 : 0,
-      ],
-    );
+    final database = await db.database;
+    return database.transaction((tx) async {
+      if (profile.isActive) {
+        await tx.rawUpdate('UPDATE llm_profiles SET is_active = 0 WHERE is_active = 1');
+      }
+      return tx.rawInsert(
+        'INSERT INTO llm_profiles (display_name, base_url, model, timeout_seconds, is_active) VALUES (?, ?, ?, ?, ?)',
+        [
+          profile.displayName,
+          profile.baseUrl,
+          profile.model,
+          profile.timeoutSeconds,
+          profile.isActive ? 1 : 0,
+        ],
+      );
+    });
   }
 
   Future<void> updateProfile(LlmProfile profile) async {
@@ -44,12 +49,34 @@ class LlmProfileDao {
   }
 
   Future<void> activateProfile(int id) async {
-    await db.rawUpdate('UPDATE llm_profiles SET is_active = 0 WHERE is_active = 1');
-    await db.rawUpdate('UPDATE llm_profiles SET is_active = 1 WHERE id = ?', [id]);
+    final database = await db.database;
+    await database.transaction((tx) async {
+      await tx.rawUpdate('UPDATE llm_profiles SET is_active = 0 WHERE is_active = 1');
+      await tx.rawUpdate('UPDATE llm_profiles SET is_active = 1 WHERE id = ?', [id]);
+    });
   }
 
   Future<void> deleteProfile(int id) async {
-    await db.rawDelete('DELETE FROM llm_profiles WHERE id = ?', [id]);
+    final database = await db.database;
+    await database.transaction((tx) async {
+      final active = await tx.rawQuery(
+        'SELECT is_active FROM llm_profiles WHERE id = ?',
+        [id],
+      );
+      await tx.rawDelete('DELETE FROM llm_profiles WHERE id = ?', [id]);
+      final wasActive = active.isNotEmpty && (active.first['is_active'] as int? ?? 0) == 1;
+      if (wasActive) {
+        final remaining = await tx.rawQuery(
+          'SELECT id FROM llm_profiles ORDER BY created_at DESC LIMIT 1',
+        );
+        if (remaining.isNotEmpty) {
+          await tx.rawUpdate(
+            'UPDATE llm_profiles SET is_active = 1 WHERE id = ?',
+            [remaining.first['id']],
+          );
+        }
+      }
+    });
   }
 
   LlmProfile _toDomain(Map<String, dynamic> row) {

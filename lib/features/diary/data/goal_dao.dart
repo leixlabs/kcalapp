@@ -5,8 +5,15 @@ class GoalDao {
   final AppDatabase db;
   GoalDao(this.db);
 
+  String _dateKey(DateTime date) {
+    final y = date.year.toString().padLeft(4, '0');
+    final m = date.month.toString().padLeft(2, '0');
+    final d = date.day.toString().padLeft(2, '0');
+    return '$y-$m-$d';
+  }
+
   Future<DailyGoal?> getGoalForDate(DateTime date) async {
-    final dateStr = date.toIso8601String();
+    final dateStr = _dateKey(date);
     final rows = await db.rawQuery(
       'SELECT * FROM daily_goals WHERE effective_date <= ? ORDER BY effective_date DESC LIMIT 1',
       [dateStr],
@@ -21,23 +28,26 @@ class GoalDao {
   }
 
   Future<int> saveGoal(DailyGoal goal) async {
-    final dateStr = goal.effectiveDate.toIso8601String();
-    final existing = await db.rawQuery(
-      'SELECT id FROM daily_goals WHERE effective_date = ?',
-      [dateStr],
-    );
-    if (existing.isNotEmpty) {
-      final id = existing.first['id'] as int;
-      await db.rawUpdate(
-        'UPDATE daily_goals SET kcal = ?, carbs_g = ?, protein_g = ?, fat_g = ? WHERE id = ?',
-        [goal.kcal, goal.carbsG, goal.proteinG, goal.fatG, id],
+    final dateStr = _dateKey(goal.effectiveDate);
+    final database = await db.database;
+    return database.transaction((tx) async {
+      final existing = await tx.rawQuery(
+        'SELECT id FROM daily_goals WHERE effective_date = ?',
+        [dateStr],
       );
-      return id;
-    }
-    return db.rawInsert(
-      'INSERT INTO daily_goals (effective_date, kcal, carbs_g, protein_g, fat_g) VALUES (?, ?, ?, ?, ?)',
-      [dateStr, goal.kcal, goal.carbsG, goal.proteinG, goal.fatG],
-    );
+      if (existing.isNotEmpty) {
+        final id = existing.first['id'] as int;
+        await tx.rawUpdate(
+          'UPDATE daily_goals SET kcal = ?, carbs_g = ?, protein_g = ?, fat_g = ? WHERE id = ?',
+          [goal.kcal, goal.carbsG, goal.proteinG, goal.fatG, id],
+        );
+        return id;
+      }
+      return tx.rawInsert(
+        'INSERT INTO daily_goals (effective_date, kcal, carbs_g, protein_g, fat_g) VALUES (?, ?, ?, ?, ?)',
+        [dateStr, goal.kcal, goal.carbsG, goal.proteinG, goal.fatG],
+      );
+    });
   }
 
   DailyGoal _toDomain(Map<String, dynamic> row) {

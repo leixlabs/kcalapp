@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../../app/theme.dart';
@@ -84,8 +86,8 @@ class MealSection extends StatelessWidget {
               child: meal.photoPath != null
                   ? ClipRRect(
                       borderRadius: BorderRadius.circular(12),
-                      child: Image.asset(
-                        meal.photoPath!,
+                      child: Image.file(
+                        File(meal.photoPath!),
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => const Icon(Icons.restaurant, size: 24),
                       ),

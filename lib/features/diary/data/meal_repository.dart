@@ -7,6 +7,7 @@ class MealRepository {
 
   Future<List<Meal>> getMealsByDate(DateTime date) => _dao.getMealsByDate(date);
   Future<List<Meal>> getMealsByMonth(DateTime month) => _dao.getMealsByMonth(month);
+  Future<List<Meal>> getAllMeals() => _dao.getAllMeals();
   Future<Meal?> getMealById(int id) => _dao.getMealById(id);
   Future<int> saveMeal(Meal meal) => _dao.saveMeal(meal);
   Future<void> updateMeal(Meal meal) => _dao.updateMeal(meal);

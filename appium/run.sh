@@ -6,10 +6,10 @@
 #   ./appium/run.sh --skip-build    # 跳过 flutter build（包已存在时加速）
 #
 # 前置（只需一次）：
-#   npm install -g appium && appium driver install xcuitest
+#   bun add -g appium && appium driver install xcuitest
 #   appium &                        # 或用 appium --allow-insecure
-#   python3 -m venv .venv && source .venv/bin/activate
-#   pip install -r appium/requirements.txt
+#   cd appium && python3 -m venv .venv && source .venv/bin/activate
+#   pip install -r requirements.txt
 set -euo pipefail
 
 cd "$(dirname "$0")/.."

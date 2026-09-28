@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../diary/application/diary_providers.dart';
 import '../../diary/domain/daily_goal.dart';
 import '../../../app/providers.dart';
 
@@ -171,7 +172,10 @@ class _GoalSettingsPageState extends ConsumerState<GoalSettingsPage> {
 
     final repo = ref.read(goalRepositoryProvider);
     await repo.saveGoal(goal);
-    if (mounted) context.pop();
+    if (mounted) {
+      ref.invalidate(dailySummaryProvider);
+      context.pop();
+    }
   }
 
   void _showError(String message) {

@@ -87,9 +87,18 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
           final profile = _profiles[index - 3];
           return Card(
             child: ListTile(
-              leading: Icon(
-                profile.isActive ? Icons.check_circle : Icons.radio_button_unchecked,
-                color: profile.isActive ? Colors.green : theme.colorScheme.outline,
+              leading: GestureDetector(
+                onTap: () async {
+                  if (!profile.isActive) {
+                    final dao = ref.read(llmProfileDaoProvider);
+                    await dao.activateProfile(profile.id!);
+                    if (mounted) _loadProfiles();
+                  }
+                },
+                child: Icon(
+                  profile.isActive ? Icons.check_circle : Icons.radio_button_unchecked,
+                  color: profile.isActive ? Colors.green : theme.colorScheme.outline,
+                ),
               ),
               title: Text(profile.displayName),
               subtitle: Text('${profile.model}\n${profile.baseUrl}', maxLines: 2, overflow: TextOverflow.ellipsis),
@@ -177,7 +186,7 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
     }
 
     if (mounted) {
-      Navigator.pop(context);
+      Navigator.of(this.context).pop();
       _loadProfiles();
     }
   }
@@ -185,23 +194,24 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
   void _confirmDelete(LlmProfile profile) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('删除配置'),
-        content: Text('确定删除「${profile.displayName}」吗？API Key 也会同时清除。'),
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('delete profile'),
+        content: Text('delete profile "${profile.displayName}"? API key will also be removed.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
+          TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('cancel')),
           TextButton(
             onPressed: () async {
               final dao = ref.read(llmProfileDaoProvider);
               final secureStore = ref.read(secureStoreProvider);
+              final nav = Navigator.of(dialogCtx);
               await dao.deleteProfile(profile.id!);
               await secureStore.delete('${profile.id}');
               if (mounted) {
-                Navigator.pop(context);
+                nav.pop();
                 _loadProfiles();
               }
             },
-            child: const Text('删除'),
+            child: const Text('delete'),
           ),
         ],
       ),
