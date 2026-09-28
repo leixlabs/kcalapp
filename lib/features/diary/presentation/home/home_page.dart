@@ -50,12 +50,16 @@ class HomePage extends ConsumerWidget {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _takePhotoAndAnalyze(context, ref),
-        icon: const Icon(Icons.camera_alt),
-        label: const Text('拍照识别热量'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
+      floatingActionButton: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onLongPress: () => _pickFromGalleryAndAnalyze(context, ref),
+        child: FloatingActionButton.extended(
+          onPressed: () => _takePhotoAndAnalyze(context, ref),
+          icon: const Icon(Icons.camera_alt),
+          label: const Text('拍照识别热量'),
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          foregroundColor: Colors.white,
+        ),
       ),
     );
   }
@@ -65,13 +69,17 @@ class HomePage extends ConsumerWidget {
     for (final type in MealType.values) {
       final typeMeals = summary.meals.where((m) => m.mealType == type).toList();
       if (typeMeals.isNotEmpty) {
+        // 注意：CustomScrollView 的 slivers 列表只接受 sliver 组件，
+        // 普通 box 组件必须用 SliverToBoxAdapter 包裹，否则渲染时崩溃。
         sections.add(
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: MealSection(
-              mealType: type,
-              meals: summary.meals,
-              selectedDate: selectedDate,
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: MealSection(
+                mealType: type,
+                meals: summary.meals,
+                selectedDate: selectedDate,
+              ),
             ),
           ),
         );
@@ -120,24 +128,66 @@ class HomePage extends ConsumerWidget {
     final photo = await controller.takePhoto();
     if (photo == null || !context.mounted) return;
 
+    await _runRecognition(context, controller, photo.path, mealType);
+  }
+
+  /// 长按入口：从相册选择图片进行 AI 识别（便于测试验证）。
+  void _pickFromGalleryAndAnalyze(BuildContext context, WidgetRef ref) async {
+    final controller = ref.read(recognitionControllerProvider);
+
+    if (!await controller.isLlmConfigured()) {
+      if (!context.mounted) return;
+      _showLlmMissingDialog(context);
+      return;
+    }
+
+    final mealType = MealType.guessFromHour(DateTime.now().hour);
+    final photo = await controller.pickFromGallery();
+    if (photo == null || !context.mounted) return;
+
+    await _runRecognition(context, controller, photo.path, mealType);
+  }
+
+  Future<void> _runRecognition(
+    BuildContext context,
+    RecognitionController controller,
+    String photoPath,
+    MealType mealType,
+  ) async {
     final cancelToken = CancelToken();
-    final dialogContext = _showRecognizingDialog(context, cancelToken);
+    var dialogClosed = false;
+
+    void closeDialog() {
+      if (dialogClosed || !context.mounted) return;
+      dialogClosed = true;
+      Navigator.of(context, rootNavigator: true).pop();
+    }
+
+    // 等弹窗路由完成推入后再开始识别，避免 pop 误伤首页路由。
+    _showRecognizingDialog(context, onCancel: () {
+      if (!cancelToken.isCancelled) cancelToken.cancel('user_cancelled');
+      closeDialog();
+    }).then((_) => dialogClosed = true);
+    await Future.delayed(const Duration(milliseconds: 50));
+    if (cancelToken.isCancelled) return;
 
     try {
       await controller.recognize(
-        photo.path,
+        photoPath,
         mealTypeHint: mealType,
         cancelToken: cancelToken,
       );
+      closeDialog();
+      // 用户已取消时不再跳转结果页
+      if (cancelToken.isCancelled) return;
       if (context.mounted) {
-        Navigator.of(dialogContext).pop();
         context.push('/recognition-result');
       }
     } on RecognitionCancelledException {
-      if (context.mounted) Navigator.of(dialogContext).pop();
+      closeDialog();
     } catch (e) {
+      closeDialog();
       if (context.mounted) {
-        Navigator.of(dialogContext).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('$e')),
         );
@@ -145,13 +195,11 @@ class HomePage extends ConsumerWidget {
     }
   }
 
-  BuildContext _showRecognizingDialog(BuildContext context, CancelToken cancelToken) {
-    late BuildContext dialogContext;
-    showDialog<void>(
+  Future<void> _showRecognizingDialog(BuildContext context, {required VoidCallback onCancel}) {
+    return showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (ctx) {
-        dialogContext = ctx;
         return PopScope(
           canPop: false,
           child: Dialog(
@@ -170,11 +218,7 @@ class HomePage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 20),
                   TextButton(
-                    onPressed: () {
-                      if (!cancelToken.isCancelled) {
-                        cancelToken.cancel('user_cancelled');
-                      }
-                    },
+                    onPressed: onCancel,
                     child: const Text('取消'),
                   ),
                 ],
@@ -184,7 +228,6 @@ class HomePage extends ConsumerWidget {
         );
       },
     );
-    return dialogContext;
   }
 
   void _showLlmMissingDialog(BuildContext context) {
@@ -247,7 +290,8 @@ class HomePage extends ConsumerWidget {
             ],
           ),
           IconButton(
-            icon: const Icon(Icons.settings_outlined),
+            icon: const Icon(Icons.settings_outlined, semanticLabel: '设置'),
+            tooltip: '设置',
             onPressed: () => context.push('/llm-settings'),
           ),
         ],

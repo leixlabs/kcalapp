@@ -240,10 +240,15 @@ class _ProfileForm extends StatefulWidget {
 
 class _ProfileFormState extends State<_ProfileForm> {
   bool _validating = false;
+  String? _validationMessage;
+  bool _validationSuccess = false;
 
   Future<void> _handleValidate() async {
     if (_validating) return;
-    setState(() => _validating = true);
+    setState(() {
+      _validating = true;
+      _validationMessage = null;
+    });
     try {
       final ref = widget.ref;
       final name = widget.nameCtrl;
@@ -254,7 +259,7 @@ class _ProfileFormState extends State<_ProfileForm> {
       final profile = widget.existing;
 
       if (name.text.trim().isEmpty || url.text.trim().isEmpty || model.text.trim().isEmpty) {
-        _snack('请先填写名称、Base URL 和模型名', isError: true);
+        _showResult('请先填写名称、Base URL 和模型名', success: false);
         return;
       }
 
@@ -263,7 +268,7 @@ class _ProfileFormState extends State<_ProfileForm> {
           : (profile?.id != null ? await ref.read(secureStoreProvider).read('${profile!.id}') : null);
 
       if (apiKey == null || apiKey.isEmpty) {
-        _snack('请填写 API Key', isError: true);
+        _showResult('请填写 API Key', success: false);
         return;
       }
 
@@ -283,35 +288,23 @@ class _ProfileFormState extends State<_ProfileForm> {
               profile: testProfile,
               apiKey: apiKey,
             );
-        _snack('连通正常', success: true);
+        _showResult('连通正常', success: true);
       } on LlmConnectionError catch (e) {
-        _snack(_connectionErrorMessage(e), isError: true);
+        _showResult(_connectionErrorMessage(e), success: false);
       } catch (e) {
-        _snack('未知错误：$e', isError: true);
+        _showResult('未知错误：$e', success: false);
       }
     } finally {
       if (mounted) setState(() => _validating = false);
     }
   }
 
-  void _snack(String msg, {bool isError = false, bool success = false}) {
+  void _showResult(String msg, {required bool success}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(
-              success ? Icons.check_circle : Icons.error_outline,
-              color: Colors.white,
-              size: 18,
-            ),
-            const SizedBox(width: 8),
-            Expanded(child: Text(msg)),
-          ],
-        ),
-        backgroundColor: success ? Colors.green.shade700 : Colors.red.shade700,
-      ),
-    );
+    setState(() {
+      _validationMessage = msg;
+      _validationSuccess = success;
+    });
   }
 
   String _connectionErrorMessage(LlmConnectionError e) {
@@ -376,7 +369,40 @@ class _ProfileFormState extends State<_ProfileForm> {
             decoration: const InputDecoration(labelText: '超时（秒）'),
             keyboardType: TextInputType.number,
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
+          if (_validationMessage != null) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: _validationSuccess ? Colors.green.shade50 : Colors.red.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: _validationSuccess ? Colors.green.shade300 : Colors.red.shade300,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    _validationSuccess ? Icons.check_circle : Icons.error_outline,
+                    size: 18,
+                    color: _validationSuccess ? Colors.green.shade700 : Colors.red.shade700,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _validationMessage!,
+                      style: TextStyle(
+                        color: _validationSuccess ? Colors.green.shade900 : Colors.red.shade900,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [

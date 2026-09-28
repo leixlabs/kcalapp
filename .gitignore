@@ -56,7 +56,7 @@ app.*.map.json
 .env.*
 !.env.example
 *.local
-
+.venv
 # 平台构建产物（补充根级，避免被误提交）
 *.apk
 *.aab

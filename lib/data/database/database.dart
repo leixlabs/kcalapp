@@ -127,8 +127,7 @@ class AppDatabase {
     await db.execute(sql, arguments);
   }
 
-  Future<T> transaction<T>(Future<T> Function() action) async {
-    final db = await database;
-    return db.transaction((_) => action());
-  }
+  // 注意：多语句写操作请直接使用 `await database` 拿到 sqflite Database 后
+  // 调 db.transaction((tx) => ...)，并在回调内使用 tx（Transaction 对象）。
+  // 不要在这里做丢弃 Transaction 的包装——回调内若回头调 Database 会死锁。
 }

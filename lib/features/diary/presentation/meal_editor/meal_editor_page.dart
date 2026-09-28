@@ -297,6 +297,7 @@ class _MealEditorPageState extends ConsumerState<MealEditorPage> {
       dateTime: _selectedDate,
       mealType: _mealType,
       name: _nameController.text.trim(),
+      photoPath: _existingMeal?.photoPath,
       servings: servings,
       source: _existingMeal?.source ?? 'manual',
       foodItems: foodItems,

@@ -62,9 +62,10 @@ class MealDao {
   }
 
   Future<int> saveMeal(Meal meal) async {
-    return db.transaction(() async {
+    final database = await db.database;
+    return database.transaction((tx) async {
       final now = DateTime.now().toIso8601String();
-      final mealId = await db.rawInsert(
+      final mealId = await tx.rawInsert(
         'INSERT INTO meals (date_time, meal_type, name, photo_path, servings, source, is_deleted, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)',
         [
           meal.dateTime.toIso8601String(),
@@ -80,7 +81,7 @@ class MealDao {
 
       for (var i = 0; i < meal.foodItems.length; i++) {
         final item = meal.foodItems[i];
-        await db.rawInsert(
+        await tx.rawInsert(
           'INSERT INTO food_items (meal_id, name, weight_g, kcal, carbs_g, protein_g, fat_g, confidence, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
           [
             mealId,
@@ -101,8 +102,9 @@ class MealDao {
 
   Future<void> updateMeal(Meal meal) async {
     assert(meal.id != null);
-    await db.transaction(() async {
-      await db.rawUpdate(
+    final database = await db.database;
+    await database.transaction((tx) async {
+      await tx.rawUpdate(
         'UPDATE meals SET date_time = ?, meal_type = ?, name = ?, photo_path = ?, servings = ?, updated_at = ? WHERE id = ?',
         [
           meal.dateTime.toIso8601String(),
@@ -114,10 +116,10 @@ class MealDao {
           meal.id,
         ],
       );
-      await db.rawDelete('DELETE FROM food_items WHERE meal_id = ?', [meal.id]);
+      await tx.rawDelete('DELETE FROM food_items WHERE meal_id = ?', [meal.id]);
       for (var i = 0; i < meal.foodItems.length; i++) {
         final item = meal.foodItems[i];
-        await db.rawInsert(
+        await tx.rawInsert(
           'INSERT INTO food_items (meal_id, name, weight_g, kcal, carbs_g, protein_g, fat_g, confidence, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
           [
             meal.id,
