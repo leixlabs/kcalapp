@@ -16,7 +16,7 @@ class AppDatabase {
     final path = p.join(dir.path, 'calory.db');
     return openDatabase(
       path,
-      version: 5,
+      version: 6,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
       onConfigure: (db) async {
@@ -68,6 +68,7 @@ class AppDatabase {
         sort_order INTEGER NOT NULL DEFAULT 0,
         minerals_json TEXT,
         vitamins_json TEXT,
+        category_id TEXT,
         FOREIGN KEY (meal_id) REFERENCES meals(id) ON DELETE CASCADE
       )
     ''');
@@ -119,6 +120,9 @@ class AppDatabase {
     }
     if (oldVersion < 5) {
       await db.execute('ALTER TABLE meals ADD COLUMN nutrition_review TEXT');
+    }
+    if (oldVersion < 6) {
+      await db.execute('ALTER TABLE food_items ADD COLUMN category_id TEXT');
     }
   }
 

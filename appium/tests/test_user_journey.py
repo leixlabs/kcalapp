@@ -196,6 +196,15 @@ def test_configure_recognize_and_review_daily_detail(driver):
     # inspect the day's saved meal details.
     assert helpers.exists(driver, helpers.by_label_contains(MEAL_NAME))
     _open_calendar_and_select_today(driver)
+    assert helpers.exists(driver, helpers.by_label_contains("食物类别 · 本周")), (
+        "Home diary does not show the weekly food-category section"
+    )
+    for category in ("谷薯类", "蔬菜水果", "肉蛋水产", "奶类", "豆类坚果"):
+        assert helpers.exists(driver, helpers.by_label_contains(category)), (
+            f"Weekly food-category progress is missing {category!r}"
+        )
+    helpers.tap_text(driver, "食物类别 · 本周", timeout=12)
+    helpers.tap_text(driver, "食物类别 · 本周", timeout=12)
     assert helpers.scroll_to_text(driver, MEAL_NAME, max_swipes=8), (
         "The selected day's home view does not contain the saved meal"
     )

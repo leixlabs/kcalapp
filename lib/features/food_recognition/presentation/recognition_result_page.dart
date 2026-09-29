@@ -864,7 +864,7 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
     }
   }
 
-  void _saveMeal() async {
+  Future<void> _saveMeal() async {
     final totalKcal = _foodItems.fold(0.0, (sum, item) => sum + item.kcal);
     if (totalKcal <= 0) {
       ScaffoldMessenger.of(context)
@@ -877,27 +877,41 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
       return;
     }
 
-    final now = DateTime.now();
-    final meal = Meal(
-      dateTime: _selectedDate,
-      mealType: _mealType,
-      name: _nameController.text.trim(),
-      photoPath: ref.read(recognitionDraftProvider)?.photoTempPath,
-      nutritionReview: ref.read(recognitionDraftProvider)?.notes,
-      servings: _servings,
-      source: 'ai',
-      foodItems: _foodItems,
-      createdAt: now,
-      updatedAt: now,
-    );
-
-    final repo = ref.read(mealRepositoryProvider);
+    String? savedPhotoPath;
     try {
+      final draft = ref.read(recognitionDraftProvider);
+      final sourcePhotoPath = draft?.photoTempPath;
+      if (sourcePhotoPath != null) {
+        final savedPhoto = await ref
+            .read(imageProcessorProvider)
+            .saveMealPhoto(sourcePhotoPath);
+        savedPhotoPath = savedPhoto.path;
+      }
+
+      final now = DateTime.now();
+      final meal = Meal(
+        dateTime: _selectedDate,
+        mealType: _mealType,
+        name: _nameController.text.trim(),
+        photoPath: savedPhotoPath,
+        nutritionReview: draft?.notes,
+        servings: _servings,
+        source: 'ai',
+        foodItems: _foodItems,
+        createdAt: now,
+        updatedAt: now,
+      );
+
+      final repo = ref.read(mealRepositoryProvider);
       await repo.saveMeal(meal);
       ref.read(recognitionDraftProvider.notifier).state = null;
       ref.invalidate(dailySummaryProvider);
+      ref.invalidate(weeklyFoodCategoryProgressProvider);
       if (mounted) context.go('/');
     } catch (e) {
+      if (savedPhotoPath != null) {
+        await ref.read(imageProcessorProvider).deleteFile(savedPhotoPath);
+      }
       if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('保存失败: $e')));

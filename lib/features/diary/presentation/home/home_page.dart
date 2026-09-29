@@ -12,6 +12,7 @@ import 'widgets/meal_section.dart';
 import '../../domain/meal_type.dart';
 import '../../../food_recognition/application/recognition_controller.dart';
 import '../calendar/calendar_page.dart';
+import 'widgets/food_category_progress_card.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -22,6 +23,7 @@ class HomePage extends ConsumerStatefulWidget {
 
 class _HomePageState extends ConsumerState<HomePage> {
   bool _isCalendarExpanded = false;
+  bool _isWeeklyFoodCategoryExpanded = true;
   DateTime _focusedDay = DateTime.now();
 
   @override
@@ -80,6 +82,10 @@ class _HomePageState extends ConsumerState<HomePage> {
               // 目标 + 半环 + 三大营养素 合并卡片
               SliverToBoxAdapter(child: _buildDailyGoalCard(context, summary)),
               const SliverToBoxAdapter(child: SizedBox(height: 16)),
+              SliverToBoxAdapter(
+                child: _buildProgressSection(context, summary, selectedDate),
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 16)),
               // 今日饮食记录标题
               SliverToBoxAdapter(
                 child: Padding(
@@ -118,11 +124,14 @@ class _HomePageState extends ConsumerState<HomePage> {
     final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-      child: Row(
-        children: [
-          // 居中：日期选择下拉
-          Expanded(
-            child: Center(
+      child: SizedBox(
+        height: 40,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Position independently of the trailing settings button so the
+            // selected date stays centered in the full app bar.
+            Center(
               child: GestureDetector(
                 onTap: () {
                   setState(() {
@@ -168,32 +177,33 @@ class _HomePageState extends ConsumerState<HomePage> {
                 ),
               ),
             ),
-          ),
-          const SizedBox(width: 12),
-          // 右侧：头像/设置
-          InkWell(
-            borderRadius: BorderRadius.circular(20),
-            onTap: () => context.push('/llm-settings'),
-            child: Semantics(
-              label: '设置',
-              button: true,
-              child: CircleAvatar(
-                radius: 18,
-                backgroundColor: theme.colorScheme.primaryContainer,
-                child: Icon(
-                  Icons.person_outline,
-                  size: 20,
-                  color: theme.colorScheme.onPrimaryContainer,
+            Align(
+              alignment: Alignment.centerRight,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(20),
+                onTap: () => context.push('/llm-settings'),
+                child: Semantics(
+                  label: '设置',
+                  button: true,
+                  child: CircleAvatar(
+                    radius: 18,
+                    backgroundColor: theme.colorScheme.primaryContainer,
+                    child: Icon(
+                      Icons.person_outline,
+                      size: 20,
+                      color: theme.colorScheme.onPrimaryContainer,
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  // ─── 目标卡片（半环 + 三大营养素）─────────────────────────────────────────
+  // ─── 每日热量目标卡片 ──────────────────────────────────────────────────────
 
   Widget _buildDailyGoalCard(BuildContext context, dynamic summary) {
     final theme = Theme.of(context);
@@ -259,9 +269,6 @@ class _HomePageState extends ConsumerState<HomePage> {
                   hasGoal: hasGoal,
                 ),
               ),
-              const SizedBox(height: 16),
-              // 三大营养素进度
-              _buildMacrosRow(context, summary),
             ],
           ),
         ),
@@ -278,22 +285,114 @@ class _HomePageState extends ConsumerState<HomePage> {
           consumed: summary.consumed.carbsG,
           target: summary.target?.carbsG,
           color: AppColors.carbs,
+          icon: Icons.grain,
         ),
+        const SizedBox(width: 12),
         _buildMacroItem(
           context: context,
           label: '蛋白质',
           consumed: summary.consumed.proteinG,
           target: summary.target?.proteinG,
           color: AppColors.protein,
+          icon: Icons.egg_outlined,
         ),
+        const SizedBox(width: 12),
         _buildMacroItem(
           context: context,
           label: '脂肪',
           consumed: summary.consumed.fatG,
           target: summary.target?.fatG,
           color: AppColors.fat,
+          icon: Icons.water_drop_outlined,
         ),
       ],
+    );
+  }
+
+  Widget _buildProgressSection(
+    BuildContext context,
+    dynamic summary,
+    DateTime selectedDate,
+  ) {
+    final theme = Theme.of(context);
+    final weekStart = DateTime(
+      selectedDate.year,
+      selectedDate.month,
+      selectedDate.day,
+    ).subtract(Duration(days: selectedDate.weekday - 1));
+
+    final nextMonday = weekStart.add(const Duration(days: 7));
+    final weeklyProgress = ref.watch(
+      weeklyFoodCategoryProgressProvider(selectedDate),
+    );
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        children: [
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '今日营养素进度',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildMacrosRow(context, summary),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            clipBehavior: Clip.antiAlias,
+            child: ExpansionTile(
+              maintainState: true,
+              leading: Icon(
+                Icons.calendar_view_week,
+                color: theme.colorScheme.primary,
+              ),
+              title: Text(
+                '食物类别 · 本周',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              subtitle: Text(
+                '${weekStart.month}/${weekStart.day}–${nextMonday.subtract(const Duration(days: 1)).month}/${nextMonday.subtract(const Duration(days: 1)).day}',
+              ),
+              onExpansionChanged: (expanded) =>
+                  setState(() => _isWeeklyFoodCategoryExpanded = expanded),
+              initiallyExpanded: _isWeeklyFoodCategoryExpanded,
+              childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              children: [
+                weeklyProgress.when(
+                  loading: () => const Padding(
+                    padding: EdgeInsets.all(20),
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+                  error: (error, _) => Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      '本周食物类别加载失败：$error',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.error,
+                      ),
+                    ),
+                  ),
+                  data: (weeklyGrams) =>
+                      FoodCategoryProgressCard(weeklyGrams: weeklyGrams),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -303,6 +402,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     required double consumed,
     required double? target,
     required Color color,
+    required IconData icon,
   }) {
     final theme = Theme.of(context);
     final hasTarget = target != null && target > 0;
@@ -313,11 +413,21 @@ class _HomePageState extends ConsumerState<HomePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.colorScheme.outline,
-            ),
+          Row(
+            children: [
+              Icon(icon, size: 14, color: color),
+              const SizedBox(width: 5),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.outline,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 4),
           RichText(

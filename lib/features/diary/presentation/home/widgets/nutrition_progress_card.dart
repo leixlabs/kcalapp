@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../../../app/theme.dart';
 import '../../../../../core/utils/format_utils.dart';
 import '../../../domain/nutrition.dart';
@@ -7,11 +8,7 @@ class NutritionProgressCard extends StatelessWidget {
   final Nutrition consumed;
   final Nutrition? target;
 
-  const NutritionProgressCard({
-    super.key,
-    required this.consumed,
-    this.target,
-  });
+  const NutritionProgressCard({super.key, required this.consumed, this.target});
 
   @override
   Widget build(BuildContext context) {
@@ -73,8 +70,14 @@ class NutritionProgressCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(icon, size: 16, color: color),
-              const SizedBox(width: 4),
-              Text(label, style: theme.textTheme.bodySmall?.copyWith(color: color, fontWeight: FontWeight.w600)),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 6),
@@ -86,16 +89,24 @@ class NutritionProgressCard extends StatelessWidget {
                   text: FormatUtils.formatGrams(consumed).replaceAll(' g', ''),
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: isOver ? theme.colorScheme.error : theme.colorScheme.onSurface,
+                    color: isOver
+                        ? theme.colorScheme.error
+                        : theme.colorScheme.onSurface,
                   ),
                 ),
                 TextSpan(
-                  text: hasTarget ? ' / ${FormatUtils.formatGrams(target!).replaceAll(' g', '')}' : '',
-                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+                  text: hasTarget
+                      ? ' / ${FormatUtils.formatGrams(target!).replaceAll(' g', '')}'
+                      : '',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.outline,
+                  ),
                 ),
                 TextSpan(
                   text: ' g',
-                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.outline,
+                  ),
                 ),
               ],
             ),
@@ -107,7 +118,9 @@ class NutritionProgressCard extends StatelessWidget {
               value: hasTarget ? progress : null,
               minHeight: 6,
               backgroundColor: color.withOpacity(0.12),
-              valueColor: AlwaysStoppedAnimation(isOver ? theme.colorScheme.error : color),
+              valueColor: AlwaysStoppedAnimation(
+                isOver ? theme.colorScheme.error : color,
+              ),
             ),
           ),
         ],
@@ -119,7 +132,7 @@ class NutritionProgressCard extends StatelessWidget {
     return Container(
       width: 1,
       height: 48,
-      margin: const EdgeInsets.symmetric(horizontal: 4),
+      margin: const EdgeInsets.symmetric(horizontal: 10),
       color: Colors.grey.withOpacity(0.15),
     );
   }

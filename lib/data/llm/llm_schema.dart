@@ -1,5 +1,7 @@
 import 'dart:convert';
+
 import '../../features/diary/domain/food_item.dart';
+import '../../features/diary/domain/food_category.dart';
 import '../../features/diary/domain/meal_draft.dart';
 import '../../features/diary/domain/meal_type.dart';
 
@@ -27,7 +29,10 @@ class LlmSchemaException implements Exception {
 }
 
 class LlmSchemaValidator {
-  static LlmRecognitionResult parse(String rawJson, {MealType? defaultMealType}) {
+  static LlmRecognitionResult parse(
+    String rawJson, {
+    MealType? defaultMealType,
+  }) {
     final cleaned = _extractJson(rawJson);
     final Map<String, dynamic> json;
     try {
@@ -38,7 +43,9 @@ class LlmSchemaValidator {
 
     final mealName = json['meal_name'] as String? ?? '未识别餐食';
     final itemsRaw = json['items'] as List? ?? [];
-    final overallConfidence = FoodItem.parseConfidence(json['overall_confidence'] as String?);
+    final overallConfidence = FoodItem.parseConfidence(
+      json['overall_confidence'] as String?,
+    );
     final notes = json['notes'] as String?;
 
     if (itemsRaw.isEmpty) {
@@ -57,34 +64,50 @@ class LlmSchemaValidator {
       final carbsG = _parseDouble(item['carbs_g']);
       final proteinG = _parseDouble(item['protein_g']);
       final fatG = _parseDouble(item['fat_g']);
-      final confidence = FoodItem.parseConfidence(item['confidence'] as String?);
+      final confidence = FoodItem.parseConfidence(
+        item['confidence'] as String?,
+      );
+      final parsedCategoryId = item['category_id'] as String?;
+      final categoryId = parsedCategoryId == FoodCategory.other.id
+          ? null
+          : FoodCategory.fromId(parsedCategoryId)?.id ??
+                FoodCategory.classify(name)?.id;
 
       // 矿物质和维生素：LLM 返回定长数组，解析失败时为 null
       final mineralsRaw = item['minerals'];
       final vitaminsRaw = item['vitamins'];
       final minerals = (mineralsRaw is List)
-          ? MicronutrientList.fromLlmList(mineralsRaw, length: Mineral.values.length)
+          ? MicronutrientList.fromLlmList(
+              mineralsRaw,
+              length: Mineral.values.length,
+            )
           : null;
       final vitamins = (vitaminsRaw is List)
-          ? MicronutrientList.fromLlmList(vitaminsRaw, length: Vitamin.values.length)
+          ? MicronutrientList.fromLlmList(
+              vitaminsRaw,
+              length: Vitamin.values.length,
+            )
           : null;
 
       if (kcal < 0 || carbsG < 0 || proteinG < 0 || fatG < 0 || weightG < 0) {
         throw LlmSchemaException('食材「$name」存在负数数值');
       }
 
-      foodItems.add(FoodItem(
-        name: name,
-        weightG: weightG,
-        kcal: kcal,
-        carbsG: carbsG,
-        proteinG: proteinG,
-        fatG: fatG,
-        confidence: confidence,
-        sortOrder: i,
-        minerals: minerals,
-        vitamins: vitamins,
-      ));
+      foodItems.add(
+        FoodItem(
+          name: name,
+          categoryId: categoryId,
+          weightG: weightG,
+          kcal: kcal,
+          carbsG: carbsG,
+          proteinG: proteinG,
+          fatG: fatG,
+          confidence: confidence,
+          sortOrder: i,
+          minerals: minerals,
+          vitamins: vitamins,
+        ),
+      );
     }
 
     return LlmRecognitionResult(
@@ -122,9 +145,11 @@ class LlmSchemaValidator {
     throw LlmSchemaException('数值类型无效: $value');
   }
 
-
-
-  static MealDraft toDraft(LlmRecognitionResult result, {String? photoTempPath, MealType? mealType}) {
+  static MealDraft toDraft(
+    LlmRecognitionResult result, {
+    String? photoTempPath,
+    MealType? mealType,
+  }) {
     return MealDraft(
       photoTempPath: photoTempPath,
       mealName: result.mealName,

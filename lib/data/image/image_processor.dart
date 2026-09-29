@@ -1,5 +1,9 @@
 import 'dart:io';
+import 'dart:math';
+
 import 'package:image/image.dart' as img;
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 
 class ImageProcessor {
   Future<File> processImage({
@@ -29,7 +33,9 @@ class ImageProcessor {
 
     final result = img.encodeJpg(processed, quality: quality);
     final tempDir = Directory.systemTemp;
-    final outputFile = File('${tempDir.path}/processed_${DateTime.now().millisecondsSinceEpoch}.jpg');
+    final outputFile = File(
+      '${tempDir.path}/processed_${DateTime.now().millisecondsSinceEpoch}.jpg',
+    );
     await outputFile.writeAsBytes(result);
     return outputFile;
   }
@@ -49,13 +55,27 @@ class ImageProcessor {
     required String sourcePath,
     required String targetDir,
   }) async {
+    final sourceFile = File(sourcePath);
+    if (!await sourceFile.exists()) {
+      throw FileSystemException('源图片不存在', sourcePath);
+    }
+
     final dir = Directory(targetDir);
     if (!await dir.exists()) {
       await dir.create(recursive: true);
     }
-    final fileName = '${DateTime.now().millisecondsSinceEpoch}_${sourcePath.split('/').last}';
-    final targetPath = '${dir.path}/$fileName';
-    await File(sourcePath).copy(targetPath);
-    return File(targetPath);
+
+    final randomSuffix = Random.secure().nextInt(1 << 32).toRadixString(16);
+    final fileName =
+        '${DateTime.now().microsecondsSinceEpoch}_$randomSuffix${p.extension(sourcePath)}';
+    return sourceFile.copy(p.join(dir.path, fileName));
+  }
+
+  Future<File> saveMealPhoto(String sourcePath) async {
+    final documentsDir = await getApplicationDocumentsDirectory();
+    return copyToDir(
+      sourcePath: sourcePath,
+      targetDir: p.join(documentsDir.path, 'meal_photos'),
+    );
   }
 }

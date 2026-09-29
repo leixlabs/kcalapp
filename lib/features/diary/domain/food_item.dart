@@ -9,6 +9,7 @@ class FoodItem {
   final int? id;
   final int? mealId;
   final String name;
+  final String? categoryId;
   final double weightG;
   final double kcal;
   final double carbsG;
@@ -29,6 +30,7 @@ class FoodItem {
     this.id,
     this.mealId,
     required this.name,
+    this.categoryId,
     required this.weightG,
     required this.kcal,
     required this.carbsG,
@@ -40,12 +42,8 @@ class FoodItem {
     this.vitamins,
   });
 
-  Nutrition get nutrition => Nutrition(
-        kcal: kcal,
-        carbsG: carbsG,
-        proteinG: proteinG,
-        fatG: fatG,
-      );
+  Nutrition get nutrition =>
+      Nutrition(kcal: kcal, carbsG: carbsG, proteinG: proteinG, fatG: fatG);
 
   /// 获取指定矿物质的值（mg/μg），null 表示未知。
   double? getMineral(Mineral m) => minerals?[m.index];
@@ -57,6 +55,7 @@ class FoodItem {
     int? id,
     int? mealId,
     String? name,
+    String? categoryId,
     double? weightG,
     double? kcal,
     double? carbsG,
@@ -71,6 +70,7 @@ class FoodItem {
       id: id ?? this.id,
       mealId: mealId ?? this.mealId,
       name: name ?? this.name,
+      categoryId: categoryId ?? this.categoryId,
       weightG: weightG ?? this.weightG,
       kcal: kcal ?? this.kcal,
       carbsG: carbsG ?? this.carbsG,
@@ -98,5 +98,6 @@ class FoodItem {
   }
 
   @override
-  String toString() => 'FoodItem(name: $name, ${weightG}g, ${kcal.round()}kcal)';
+  String toString() =>
+      'FoodItem(name: $name, ${weightG}g, ${kcal.round()}kcal)';
 }

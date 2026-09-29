@@ -377,6 +377,7 @@ class _MealEditorPageState extends ConsumerState<MealEditorPage> {
       }
       if (mounted) {
         ref.invalidate(dailySummaryProvider);
+        ref.invalidate(weeklyFoodCategoryProgressProvider);
         context.pop();
       }
     } catch (e) {
@@ -389,6 +390,7 @@ class _MealEditorPageState extends ConsumerState<MealEditorPage> {
 }
 
 class FoodItemEditor {
+  String? categoryId;
   final TextEditingController nameController = TextEditingController();
   final TextEditingController weightController = TextEditingController();
   final TextEditingController kcalController = TextEditingController();
@@ -399,6 +401,7 @@ class FoodItemEditor {
   FoodItemEditor();
 
   FoodItemEditor.fromFoodItem(FoodItem item) {
+    categoryId = item.categoryId;
     nameController.text = item.name;
     weightController.text = item.weightG.toString();
     kcalController.text = item.kcal.toString();
@@ -431,6 +434,7 @@ class FoodItemEditor {
       name: nameController.text.trim().isEmpty
           ? '食材'
           : nameController.text.trim(),
+      categoryId: categoryId,
       weightG: double.tryParse(weightController.text) ?? 0,
       kcal: double.tryParse(kcalController.text) ?? 0,
       carbsG: double.tryParse(carbsController.text) ?? 0,

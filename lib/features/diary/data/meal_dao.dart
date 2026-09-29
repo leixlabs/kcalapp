@@ -51,6 +51,23 @@ class MealDao {
     return result;
   }
 
+  Future<List<Meal>> getMealsBetween(DateTime start, DateTime end) async {
+    final mealsRows = await db.rawQuery(
+      'SELECT * FROM meals WHERE date_time >= ? AND date_time < ? AND is_deleted = 0 ORDER BY date_time',
+      [start.toIso8601String(), end.toIso8601String()],
+    );
+
+    final List<Meal> result = [];
+    for (final row in mealsRows) {
+      final itemsRows = await db.rawQuery(
+        'SELECT * FROM food_items WHERE meal_id = ? ORDER BY sort_order',
+        [row['id']],
+      );
+      result.add(_toDomain(row, itemsRows));
+    }
+    return result;
+  }
+
   Future<List<Meal>> getAllMeals() async {
     final mealsRows = await db.rawQuery(
       'SELECT * FROM meals WHERE is_deleted = 0 ORDER BY date_time',
@@ -99,7 +116,7 @@ class MealDao {
       for (var i = 0; i < meal.foodItems.length; i++) {
         final item = meal.foodItems[i];
         await tx.rawInsert(
-          'INSERT INTO food_items (meal_id, name, weight_g, kcal, carbs_g, protein_g, fat_g, confidence, sort_order, minerals_json, vitamins_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          'INSERT INTO food_items (meal_id, name, weight_g, kcal, carbs_g, protein_g, fat_g, confidence, sort_order, minerals_json, vitamins_json, category_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
           [
             mealId,
             item.name,
@@ -112,6 +129,7 @@ class MealDao {
             i,
             MicronutrientList.toJson(item.minerals),
             MicronutrientList.toJson(item.vitamins),
+            item.categoryId,
           ],
         );
       }
@@ -140,7 +158,7 @@ class MealDao {
       for (var i = 0; i < meal.foodItems.length; i++) {
         final item = meal.foodItems[i];
         await tx.rawInsert(
-          'INSERT INTO food_items (meal_id, name, weight_g, kcal, carbs_g, protein_g, fat_g, confidence, sort_order, minerals_json, vitamins_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          'INSERT INTO food_items (meal_id, name, weight_g, kcal, carbs_g, protein_g, fat_g, confidence, sort_order, minerals_json, vitamins_json, category_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
           [
             meal.id,
             item.name,
@@ -153,6 +171,7 @@ class MealDao {
             i,
             MicronutrientList.toJson(item.minerals),
             MicronutrientList.toJson(item.vitamins),
+            item.categoryId,
           ],
         );
       }
@@ -193,6 +212,7 @@ class MealDao {
               id: i['id'] as int?,
               mealId: i['meal_id'] as int?,
               name: i['name'] as String? ?? '',
+              categoryId: i['category_id'] as String?,
               weightG: (i['weight_g'] as num?)?.toDouble() ?? 0,
               kcal: (i['kcal'] as num?)?.toDouble() ?? 0,
               carbsG: (i['carbs_g'] as num?)?.toDouble() ?? 0,

@@ -17,17 +17,13 @@ class DailyGoal {
     required this.fatG,
   });
 
-  Nutrition get target => Nutrition(
-        kcal: kcal,
-        carbsG: carbsG,
-        proteinG: proteinG,
-        fatG: fatG,
-      );
+  Nutrition get target =>
+      Nutrition(kcal: kcal, carbsG: carbsG, proteinG: proteinG, fatG: fatG);
 
-  static const _recommendedKcal = 1700.0;
-  static const _recommendedCarbs = 213.0;
-  static const _recommendedProtein = 85.0;
-  static const _recommendedFat = 57.0;
+  static const _recommendedKcal = 1870.0;
+  static const _recommendedCarbs = 257.0;
+  static const _recommendedProtein = 84.0;
+  static const _recommendedFat = 56.0;
 
   static double get recommendedKcal => _recommendedKcal;
   static double get recommendedCarbsG => _recommendedCarbs;
@@ -35,13 +31,13 @@ class DailyGoal {
   static double get recommendedFatG => _recommendedFat;
 
   static DailyGoal get recommendedDefaults => DailyGoal(
-        id: null,
-        effectiveDate: DateTime.now(),
-        kcal: _recommendedKcal,
-        carbsG: _recommendedCarbs,
-        proteinG: _recommendedProtein,
-        fatG: _recommendedFat,
-      );
+    id: null,
+    effectiveDate: DateTime.now(),
+    kcal: _recommendedKcal,
+    carbsG: _recommendedCarbs,
+    proteinG: _recommendedProtein,
+    fatG: _recommendedFat,
+  );
 
   DailyGoal copyWith({
     int? id,

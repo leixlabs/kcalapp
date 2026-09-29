@@ -1,11 +1,16 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
 import 'package:calory/features/diary/domain/nutrition.dart';
 import 'package:calory/features/diary/domain/food_item.dart';
 import 'package:calory/features/diary/domain/meal.dart';
 import 'package:calory/features/diary/domain/meal_type.dart';
+import 'package:calory/features/diary/domain/daily_goal.dart';
+import 'package:calory/features/diary/domain/food_category.dart';
 import 'package:calory/features/diary/application/daily_summary.dart';
 import 'package:calory/core/widgets/ruler_value_picker.dart';
+import 'package:calory/data/llm/llm_schema.dart';
 
 void main() {
   group('Nutrition', () {
@@ -248,6 +253,98 @@ void main() {
         expect(totals, hasLength(2));
       },
     );
+  });
+
+  group('DailyGoal defaults', () {
+    test('uses the personalized daily calorie and macro targets', () {
+      final goal = DailyGoal.recommendedDefaults;
+
+      expect(goal.kcal, 1870);
+      expect(goal.carbsG, 257);
+      expect(goal.proteinG, 84);
+      expect(goal.fatG, 56);
+    });
+  });
+
+  group('FoodCategory', () {
+    test('classifies common food names into broad guideline groups', () {
+      expect(FoodCategory.classify('糙米饭'), FoodCategory.grains);
+      expect(FoodCategory.classify('西兰花'), FoodCategory.vegetablesAndFruits);
+      expect(FoodCategory.classify('苹果'), FoodCategory.vegetablesAndFruits);
+      expect(FoodCategory.classify('鸡蛋'), FoodCategory.meatEggsAndSeafood);
+      expect(FoodCategory.classify('牛奶'), FoodCategory.dairy);
+      expect(FoodCategory.classify('核桃'), FoodCategory.beansAndNuts);
+      expect(FoodCategory.classify('咖啡'), isNull);
+    });
+
+    test(
+      'weekly category totals include servings and ignore unknown foods',
+      () {
+        final date = DateTime(2026, 9, 29);
+        final totals = aggregateWeeklyFoodCategories([
+          Meal(
+            dateTime: date,
+            mealType: MealType.breakfast,
+            name: '早餐',
+            servings: 2,
+            foodItems: [
+              FoodItem(
+                name: '燕麦',
+                weightG: 40,
+                kcal: 150,
+                carbsG: 25,
+                proteinG: 5,
+                fatG: 3,
+              ),
+              FoodItem(
+                name: '咖啡',
+                weightG: 200,
+                kcal: 2,
+                carbsG: 0,
+                proteinG: 0,
+                fatG: 0,
+              ),
+            ],
+            createdAt: date,
+            updatedAt: date,
+          ),
+        ]);
+
+        expect(totals[FoodCategory.grains], 80);
+        expect(totals.values.reduce((a, b) => a + b), 80);
+      },
+    );
+
+    test('recognition schema retains model-assigned category ids', () {
+      final result = LlmSchemaValidator.parse(
+        jsonEncode({
+          'meal_name': '测试餐',
+          'items': [
+            {
+              'name': '海带',
+              'category_id': 'vegetables_fruits',
+              'weight_g': 50,
+              'kcal': 10,
+              'carbs_g': 2,
+              'protein_g': 1,
+              'fat_g': 0,
+            },
+            {
+              'name': '不明食材',
+              'category_id': 'other',
+              'weight_g': 20,
+              'kcal': 5,
+              'carbs_g': 1,
+              'protein_g': 0,
+              'fat_g': 0,
+            },
+          ],
+        }),
+      );
+
+      expect(result.foodItems[0].categoryId, 'vegetables_fruits');
+      expect(result.foodItems[1].categoryId, isNull);
+    });
   });
 
   group('MealType', () {

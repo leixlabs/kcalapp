@@ -74,6 +74,7 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
       final repo = ref.read(mealRepositoryProvider);
       await repo.softDeleteMeal(_meal!.id!);
       ref.invalidate(dailySummaryProvider);
+      ref.invalidate(weeklyFoodCategoryProgressProvider);
       if (mounted) context.pop();
     }
   }
@@ -956,6 +957,7 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
           .read(mealRepositoryProvider)
           .updateMeal(meal.copyWith(updatedAt: DateTime.now()));
       ref.invalidate(dailySummaryProvider);
+      ref.invalidate(weeklyFoodCategoryProgressProvider);
       if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(const SnackBar(content: Text('已更新')));

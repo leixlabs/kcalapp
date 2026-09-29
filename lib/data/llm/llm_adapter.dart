@@ -106,6 +106,7 @@ class LlmAdapter {
 
 要求：
 - 只识别图片中可见的食物，不要编造图片中不存在的内容
+- 为每种食材指定一个食物类别 category_id，按食材本身而不是整道菜判断：grains（谷薯类）、vegetables_fruits（蔬菜水果）、meat_eggs_seafood（肉蛋水产）、dairy（奶类）、beans_nuts（豆类坚果）；无法归入以上类别时填 other。复合菜品应拆分识别可见的主要食材后分别分类
 - weight_g、kcal、carbs_g、protein_g、fat_g 均为估算值，必须为非负数
 - confidence 表示你对该食材识别和营养估算的置信度''';
   }
@@ -130,6 +131,18 @@ class LlmAdapter {
                 'type': 'object',
                 'properties': {
                   'name': {'type': 'string', 'description': '食材名称'},
+                  'category_id': {
+                    'type': 'string',
+                    'enum': [
+                      'grains',
+                      'vegetables_fruits',
+                      'meat_eggs_seafood',
+                      'dairy',
+                      'beans_nuts',
+                      'other',
+                    ],
+                    'description': '食材类别：谷薯、蔬菜水果、肉蛋水产、奶类、豆类坚果或其他',
+                  },
                   'weight_g': {'type': 'number', 'description': '估算重量（克）'},
                   'kcal': {'type': 'number', 'description': '估算热量（千卡）'},
                   'carbs_g': {'type': 'number', 'description': '碳水化合物（克）'},
@@ -161,6 +174,7 @@ class LlmAdapter {
                 },
                 'required': [
                   'name',
+                  'category_id',
                   'weight_g',
                   'kcal',
                   'carbs_g',

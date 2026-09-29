@@ -42,7 +42,8 @@ The default run verifies one ordered user journey:
 2. Pick the simulator photo, recognize it through the mock, save the meal, and
    verify that the image request reached the mock.
 3. Verify the saved meal on the home diary, open the calendar and select today,
-   then inspect the saved meal's ingredients and nutrition details.
+   switch to weekly food-category progress and inspect the saved meal's
+   ingredients and nutrition details.
 
 The journey uses a uniquely named profile and leaves the resulting test data in
 the simulator. It reuses a healthy Mock LLM already listening on `MOCK_PORT`;

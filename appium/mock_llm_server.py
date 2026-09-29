@@ -19,13 +19,13 @@ LOCK = threading.Lock()
 FIXED_RESULT = {
     "meal_name": "测试早餐组合",
     "items": [
-        {"name": "饺子", "weight_g": 200, "kcal": 350, "carbs_g": 43, "protein_g": 12, "fat_g": 14, "confidence": "high",
+        {"name": "饺子", "category_id": "grains", "weight_g": 200, "kcal": 350, "carbs_g": 43, "protein_g": 12, "fat_g": 14, "confidence": "high",
          "minerals": [2.1, 1.2, 0.2, 8, 2, 5, 3, 0, 30, 200, 20],
          "vitamins": [12, 0.08, 0.12, 1.5, 0.4, 0.1, 2, 20, 0.2, 2, 0.1, 0.5, 3]},
-        {"name": "鸡蛋", "weight_g": 50, "kcal": 70, "carbs_g": 0.5, "protein_g": 6, "fat_g": 5, "confidence": "high",
+        {"name": "鸡蛋", "category_id": "meat_eggs_seafood", "weight_g": 50, "kcal": 70, "carbs_g": 0.5, "protein_g": 6, "fat_g": 5, "confidence": "high",
          "minerals": [0.9, 0.6, 0.03, 15, 12, 3, 1, 0, 25, 70, 5],
          "vitamins": [75, 0.02, 0.2, 0.04, 0.7, 0.06, 5, 25, 0.6, 0, 1.1, 0.5, 0.3]},
-        {"name": "橘子", "weight_g": 80, "kcal": 42, "carbs_g": 10, "protein_g": 1, "fat_g": 0.2, "confidence": "medium",
+        {"name": "橘子", "category_id": "vegetables_fruits", "weight_g": 80, "kcal": 42, "carbs_g": 10, "protein_g": 1, "fat_g": 0.2, "confidence": "medium",
          "minerals": [0.1, 0.1, 0.04, 0.2, 0, 0, 0, 0, 32, 1, 8],
          "vitamins": [8, 0.06, 0.03, 0.2, 0.2, 0.06, 0, 16, 0, 32, 0, 0.2, 0]},
     ],
