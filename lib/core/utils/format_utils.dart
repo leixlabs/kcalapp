@@ -20,6 +20,11 @@ class FormatUtils {
     return DateFormat('M月d日', 'zh_CN').format(date);
   }
 
+  /// 用于顶部日期选择器，如「2026年09月29日 ▾」
+  static String formatDateChinese(DateTime date) {
+    return DateFormat('yyyy年MM月dd日', 'zh_CN').format(date);
+  }
+
   static String formatTime(DateTime time) {
     return DateFormat('HH:mm', 'zh_CN').format(time);
   }

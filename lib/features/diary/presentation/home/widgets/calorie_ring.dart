@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 class CalorieRing extends StatelessWidget {
@@ -18,39 +19,48 @@ class CalorieRing extends StatelessWidget {
     final progress = (target != null && target! > 0) ? (consumed / target!).clamp(0.0, 1.0) : 0.0;
     final isOver = target != null && consumed > target!;
 
+    // 半环：宽度 160，高度只需约 100（只显示上半圆弧部分）
     return SizedBox(
-      width: 140,
-      height: 140,
+      width: 160,
+      height: 100,
       child: Stack(
-        alignment: Alignment.center,
+        alignment: Alignment.topCenter,
         children: [
           CustomPaint(
-            size: const Size(140, 140),
-            painter: _RingPainter(
+            size: const Size(160, 100),
+            painter: _HalfRingPainter(
               progress: progress,
               trackColor: theme.colorScheme.surfaceContainerHighest,
               progressColor: isOver ? theme.colorScheme.error : theme.colorScheme.primary,
             ),
           ),
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                consumed.round().toString(),
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: isOver ? theme.colorScheme.error : theme.colorScheme.onSurface,
+          // 文字居中显示在半环底部
+          Positioned(
+            bottom: 0,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '食物摄入',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.outline,
+                  ),
                 ),
-              ),
-              Text(
-                hasGoal && target != null
-                    ? '/ ${target!.round()} kcal'
-                    : 'kcal',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.outline,
+                Text(
+                  consumed.round().toString(),
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: isOver ? theme.colorScheme.error : theme.colorScheme.onSurface,
+                  ),
                 ),
-              ),
-            ],
+                Text(
+                  'kcal',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.outline,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -58,12 +68,12 @@ class CalorieRing extends StatelessWidget {
   }
 }
 
-class _RingPainter extends CustomPainter {
+class _HalfRingPainter extends CustomPainter {
   final double progress;
   final Color trackColor;
   final Color progressColor;
 
-  _RingPainter({
+  _HalfRingPainter({
     required this.progress,
     required this.trackColor,
     required this.progressColor,
@@ -71,35 +81,48 @@ class _RingPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2 - 8;
+    final center = Offset(size.width / 2, size.height - 8);
+    final radius = size.width / 2 - 10;
+
+    // 半环从左侧 180° 到右侧 0°（即从 π 到 0，即上半部分）
+    const startAngle = math.pi;       // 从左侧开始
+    const sweepTotal = math.pi;       // 扫过 180°（上半圆）
 
     final trackPaint = Paint()
       ..color = trackColor
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 10
+      ..strokeWidth = 12
       ..strokeCap = StrokeCap.round;
 
     final progressPaint = Paint()
       ..color = progressColor
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 10
+      ..strokeWidth = 12
       ..strokeCap = StrokeCap.round;
 
-    canvas.drawCircle(center, radius, trackPaint);
-
-    final sweepAngle = progress * 2 * 3.14159265;
+    // 画背景轨道（完整上半弧）
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius),
-      -3.14159265 / 2,
-      sweepAngle,
+      startAngle,
+      sweepTotal,
       false,
-      progressPaint,
+      trackPaint,
     );
+
+    // 画进度弧
+    if (progress > 0) {
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        startAngle,
+        sweepTotal * progress,
+        false,
+        progressPaint,
+      );
+    }
   }
 
   @override
-  bool shouldRepaint(covariant _RingPainter oldDelegate) {
+  bool shouldRepaint(covariant _HalfRingPainter oldDelegate) {
     return oldDelegate.progress != progress ||
         oldDelegate.trackColor != trackColor ||
         oldDelegate.progressColor != progressColor;

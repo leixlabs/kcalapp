@@ -115,7 +115,11 @@ def _select_test_photo(driver) -> None:
 def _open_calendar_and_select_today(driver) -> None:
     date_button = helpers.wait_for_any(
         driver,
-        [helpers.by_label_contains("今天"), helpers.by_label_contains("昨日")],
+        [
+            helpers.by_label_contains("选择日期"),
+            helpers.by_label_contains("今天"),
+            helpers.by_label_contains("昨日"),
+        ],
         timeout=12,
     )
     date_button.click()
@@ -201,11 +205,32 @@ def test_configure_recognize_and_review_daily_detail(driver):
         driver, helpers.by_label_contains(MEAL_NAME), timeout=12
     )
     meal_card.click()
+
+    # 新 UI：点击餐食进入查看页（MealViewPage），不再直接进编辑页
+    # 查看页顶部显示餐食名，底部有"修改"按钮
+    helpers.wait_for(driver, helpers.by_label_contains(MEAL_NAME), timeout=15)
+
+    # 检查食材在查看页中可见
+    for ingredient in ("饺子", "鸡蛋", "橘子"):
+        found = False
+        for _ in range(6):
+            if helpers.exists(driver, helpers.by_label_contains(ingredient)):
+                found = True
+                break
+            helpers.scroll_down(driver, ratio=0.35)
+            time.sleep(0.25)
+        assert found, f"Meal view is missing ingredient {ingredient!r}"
+    assert helpers.exists(driver, helpers.by_label_contains("462")), (
+        "Meal view does not show the expected total of 462 kcal"
+    )
+
+    # 点击"修改"按钮进入编辑页
+    helpers.tap_text(driver, "修改", timeout=12)
     helpers.wait_for(driver, helpers.by_label("编辑餐食"), timeout=15)
 
     editor_fields = driver.find_elements(AppiumBy.CLASS_NAME, "XCUIElementTypeTextField")
     values = [field.get_attribute("value") or "" for field in editor_fields]
-    assert MEAL_NAME in values, f"Daily detail does not show the saved meal name: {values}"
+    assert MEAL_NAME in values, f"Editor does not show the saved meal name: {values}"
     for ingredient in ("饺子", "鸡蛋", "橘子"):
         found = False
         for _ in range(6):
@@ -216,7 +241,7 @@ def test_configure_recognize_and_review_daily_detail(driver):
                 break
             helpers.scroll_down(driver, ratio=0.35)
             time.sleep(0.25)
-        assert found, f"Daily detail is missing ingredient {ingredient!r}: {values}"
+        assert found, f"Editor is missing ingredient {ingredient!r}: {values}"
     assert helpers.exists(driver, helpers.by_label_contains("462 kcal")), (
-        "Daily detail does not show the expected total of 462 kcal"
+        "Editor does not show the expected total of 462 kcal"
     )

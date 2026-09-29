@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../features/diary/presentation/home/home_page.dart';
 import '../features/diary/presentation/calendar/calendar_page.dart';
 import '../features/diary/presentation/meal_editor/meal_editor_page.dart';
+import '../features/diary/presentation/meal_view/meal_view_page.dart';
 import '../features/food_recognition/presentation/recognition_result_page.dart';
 import '../features/goals/presentation/goal_settings_page.dart';
 import '../features/llm_settings/presentation/llm_settings_page.dart';
@@ -20,6 +21,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/calendar',
         builder: (context, state) => const CalendarPage(),
+      ),
+      GoRoute(
+        path: '/meal-view',
+        builder: (context, state) {
+          final mealId = state.uri.queryParameters['id'];
+          return MealViewPage(mealId: mealId);
+        },
       ),
       GoRoute(
         path: '/meal-editor',

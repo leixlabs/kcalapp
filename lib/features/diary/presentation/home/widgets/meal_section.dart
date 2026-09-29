@@ -2,8 +2,6 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../../app/theme.dart';
-import '../../../../../core/utils/format_utils.dart';
 import '../../../domain/meal.dart';
 import '../../../domain/meal_type.dart';
 
@@ -28,127 +26,205 @@ class MealSection extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    final totalKcal = typeMeals.fold(0.0, (sum, m) => sum + m.totalNutrition.kcal);
-    final totalWeight = typeMeals.fold(0.0, (sum, m) => sum + m.totalWeightG);
+    final totalKcal =
+        typeMeals.fold(0.0, (sum, m) => sum + m.totalNutrition.kcal);
+    final totalWeight =
+        typeMeals.fold(0.0, (sum, m) => sum + m.totalWeightG);
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ── 餐次标题行 ──────────────────────────────────────────────
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(
                   children: [
-                    Icon(mealType.icon, size: 20, color: theme.colorScheme.outline),
+                    Icon(mealType.icon,
+                        size: 22, color: theme.colorScheme.outline),
                     const SizedBox(width: 8),
-                    Text(mealType.label, style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    )),
+                    Text(
+                      mealType.label,
+                      style: theme.textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w700),
+                    ),
                   ],
                 ),
-                Text(
-                  '${totalWeight.round()}g/${totalKcal.round()}kcal',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.outline,
-                    fontWeight: FontWeight.w500,
+                RichText(
+                  text: TextSpan(
+                    children: [
+                      TextSpan(
+                        text: '${totalWeight.round()}g',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.outline,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      TextSpan(
+                        text: '/',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.outlineVariant,
+                        ),
+                      ),
+                      TextSpan(
+                        text: '${totalKcal.round()}',
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ),
+                      TextSpan(
+                        text: 'kcal',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.outline,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            ...typeMeals.map((meal) => _buildMealCard(context, meal)),
+            const SizedBox(height: 8),
+            // ── 每条记录 ────────────────────────────────────────────────
+            ...typeMeals.map((meal) => _MealItem(meal: meal)),
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildMealCard(BuildContext context, Meal meal) {
+// ─── 单条记录 ──────────────────────────────────────────────────────────────────
+
+class _MealItem extends StatelessWidget {
+  final Meal meal;
+
+  const _MealItem({required this.meal});
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isAiSource = meal.source == 'ai';
+
+    // 食物种类：用食材名列表，最多展示 3 个
+    final ingredientNames = meal.foodItems.map((i) => i.name).toList();
+    final categoryText = ingredientNames.isEmpty
+        ? meal.mealType.label
+        : ingredientNames.length <= 3
+            ? ingredientNames.join(' · ')
+            : '${ingredientNames.take(3).join(' · ')} 等';
+
     return InkWell(
       borderRadius: BorderRadius.circular(12),
-      onTap: () => context.push('/meal-editor?id=${meal.id}'),
+      // 点击进查看页（Task 5 一起改）
+      onTap: () => context.push('/meal-view?id=${meal.id}'),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Row(
           children: [
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: meal.photoPath != null
-                  ? ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.file(
-                        File(meal.photoPath!),
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Icon(Icons.restaurant, size: 24),
-                      ),
-                    )
-                  : const Icon(Icons.restaurant, size: 24),
-            ),
+            // ── 图片 ──────────────────────────────────────────────────
+            _MealThumbnail(photoPath: meal.photoPath),
             const SizedBox(width: 12),
+            // ── 名称 + 食物种类 ────────────────────────────────────────
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          meal.name,
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            fontWeight: FontWeight.w500,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (isAiSource) ...[
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppColors.aiEstimate.withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text('AI', style: theme.textTheme.labelSmall?.copyWith(
-                            color: AppColors.aiEstimate, fontSize: 10,
-                          )),
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 2),
                   Text(
-                    '${FormatUtils.formatTime(meal.dateTime)} · ${meal.foodItems.length}种食材 · 约${meal.totalWeightG.round()}g',
-                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+                    meal.name,
+                    style: theme.textTheme.bodyLarge
+                        ?.copyWith(fontWeight: FontWeight.w600),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    categoryText,
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: theme.colorScheme.outline),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 10),
+            // ── 重量 + kcal ───────────────────────────────────────────
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  '${meal.totalNutrition.kcal.round()}kcal',
-                  style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                RichText(
+                  text: TextSpan(
+                    children: [
+                      TextSpan(
+                        text: '${meal.totalNutrition.kcal.round()}',
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ),
+                      TextSpan(
+                        text: 'kcal',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.outline,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 2),
-                const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+                Text(
+                  '约${meal.totalWeightG.round()}g',
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: theme.colorScheme.outline),
+                ),
               ],
             ),
+            const SizedBox(width: 4),
+            Icon(Icons.chevron_right,
+                size: 18, color: theme.colorScheme.outlineVariant),
           ],
         ),
       ),
+    );
+  }
+}
+
+// ─── 缩略图组件 ────────────────────────────────────────────────────────────────
+
+class _MealThumbnail extends StatelessWidget {
+  final String? photoPath;
+
+  const _MealThumbnail({this.photoPath});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      width: 60,
+      height: 60,
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: photoPath != null
+          ? Image.file(
+              File(photoPath!),
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => _placeholder(theme),
+            )
+          : _placeholder(theme),
+    );
+  }
+
+  Widget _placeholder(ThemeData theme) {
+    return Icon(
+      Icons.restaurant,
+      size: 28,
+      color: theme.colorScheme.outline.withOpacity(0.5),
     );
   }
 }
