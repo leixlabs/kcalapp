@@ -2,6 +2,7 @@ import '../../../data/database/database.dart';
 import '../domain/food_item.dart';
 import '../domain/meal.dart';
 import '../domain/meal_type.dart';
+import '../../../data/llm/llm_schema.dart';
 
 class MealDao {
   final AppDatabase db;
@@ -99,7 +100,7 @@ class MealDao {
     return database.transaction((tx) async {
       final now = DateTime.now().toIso8601String();
       final mealId = await tx.rawInsert(
-        'INSERT INTO meals (date_time, meal_type, name, photo_path, nutrition_review, servings, source, is_deleted, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?)',
+        'INSERT INTO meals (date_time, meal_type, name, photo_path, nutrition_review, servings, source, ai_recognition_status, is_deleted, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)',
         [
           meal.dateTime.toIso8601String(),
           meal.mealType.name,
@@ -108,6 +109,7 @@ class MealDao {
           meal.nutritionReview,
           meal.servings,
           meal.source,
+          meal.aiRecognitionStatus.name,
           now,
           now,
         ],
@@ -142,7 +144,7 @@ class MealDao {
     final database = await db.database;
     await database.transaction((tx) async {
       await tx.rawUpdate(
-        'UPDATE meals SET date_time = ?, meal_type = ?, name = ?, photo_path = ?, nutrition_review = ?, servings = ?, updated_at = ? WHERE id = ?',
+        'UPDATE meals SET date_time = ?, meal_type = ?, name = ?, photo_path = ?, nutrition_review = ?, servings = ?, ai_recognition_status = ?, updated_at = ? WHERE id = ?',
         [
           meal.dateTime.toIso8601String(),
           meal.mealType.name,
@@ -150,6 +152,7 @@ class MealDao {
           meal.photoPath,
           meal.nutritionReview,
           meal.servings,
+          meal.aiRecognitionStatus.name,
           DateTime.now().toIso8601String(),
           meal.id,
         ],
@@ -176,6 +179,77 @@ class MealDao {
         );
       }
     });
+  }
+
+  Future<void> updateAiRecognition(
+    int mealId, {
+    required AiRecognitionStatus status,
+    LlmRecognitionResult? result,
+  }) async {
+    final database = await db.database;
+    await database.transaction((tx) async {
+      if (result == null) {
+        final statusName = status == AiRecognitionStatus.processing
+            ? 'AI 识别中'
+            : status == AiRecognitionStatus.failed
+            ? '识别失败的餐食'
+            : null;
+        if (statusName == null) {
+          await tx.rawUpdate(
+            'UPDATE meals SET ai_recognition_status = ?, updated_at = ? WHERE id = ?',
+            [status.name, DateTime.now().toIso8601String(), mealId],
+          );
+        } else {
+          await tx.rawUpdate(
+            'UPDATE meals SET name = ?, ai_recognition_status = ?, updated_at = ? WHERE id = ?',
+            [statusName, status.name, DateTime.now().toIso8601String(), mealId],
+          );
+        }
+        return;
+      }
+
+      await tx.rawUpdate(
+        'UPDATE meals SET name = ?, nutrition_review = ?, ai_recognition_status = ?, updated_at = ? WHERE id = ?',
+        [
+          result.mealName,
+          result.notes,
+          status.name,
+          DateTime.now().toIso8601String(),
+          mealId,
+        ],
+      );
+      await tx.rawDelete('DELETE FROM food_items WHERE meal_id = ?', [mealId]);
+      for (final item in result.foodItems) {
+        await tx.rawInsert(
+          'INSERT INTO food_items (meal_id, name, weight_g, kcal, carbs_g, protein_g, fat_g, confidence, sort_order, minerals_json, vitamins_json, category_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          [
+            mealId,
+            item.name,
+            item.weightG,
+            item.kcal,
+            item.carbsG,
+            item.proteinG,
+            item.fatG,
+            item.confidence?.name,
+            item.sortOrder,
+            MicronutrientList.toJson(item.minerals),
+            MicronutrientList.toJson(item.vitamins),
+            item.categoryId,
+          ],
+        );
+      }
+    });
+  }
+
+  Future<void> markInterruptedAiRecognitionsFailed() async {
+    await db.rawUpdate(
+      "UPDATE meals SET name = '识别失败的餐食', ai_recognition_status = ?, updated_at = ? WHERE ai_recognition_status = ? AND is_deleted = 0",
+      [
+        AiRecognitionStatus.failed.name,
+        DateTime.now().toIso8601String(),
+        AiRecognitionStatus.processing.name,
+      ],
+    );
   }
 
   Future<void> softDeleteMeal(int id) async {
@@ -206,6 +280,10 @@ class MealDao {
       nutritionReview: row['nutrition_review'] as String?,
       servings: (row['servings'] as num?)?.toDouble() ?? 1.0,
       source: row['source'] as String? ?? 'manual',
+      aiRecognitionStatus: AiRecognitionStatus.values.firstWhere(
+        (status) => status.name == row['ai_recognition_status'],
+        orElse: () => AiRecognitionStatus.none,
+      ),
       foodItems: items
           .map(
             (i) => FoodItem(

@@ -11,6 +11,8 @@ import 'package:calory/features/diary/domain/food_category.dart';
 import 'package:calory/features/diary/application/daily_summary.dart';
 import 'package:calory/core/widgets/ruler_value_picker.dart';
 import 'package:calory/data/llm/llm_schema.dart';
+import 'package:calory/features/diary/presentation/home/widgets/meal_section.dart';
+import 'package:go_router/go_router.dart';
 
 void main() {
   group('Nutrition', () {
@@ -109,6 +111,28 @@ void main() {
   });
 
   group('Meal', () {
+    test('copyWith preserves AI recognition status', () {
+      final meal = Meal(
+        dateTime: DateTime(2026, 9, 29),
+        mealType: MealType.dinner,
+        name: 'Recognition',
+        aiRecognitionStatus: AiRecognitionStatus.failed,
+        createdAt: DateTime(2026, 9, 29),
+        updatedAt: DateTime(2026, 9, 29),
+      );
+
+      expect(
+        meal.copyWith(name: 'Retry').aiRecognitionStatus,
+        AiRecognitionStatus.failed,
+      );
+      expect(
+        meal
+            .copyWith(aiRecognitionStatus: AiRecognitionStatus.processing)
+            .aiRecognitionStatus,
+        AiRecognitionStatus.processing,
+      );
+    });
+
     test('total nutrition should aggregate from food items', () {
       final meal = Meal(
         dateTime: DateTime.now(),
@@ -266,15 +290,76 @@ void main() {
     });
   });
 
+  testWidgets('double-tapping a failed meal photo requests a retry', (
+    tester,
+  ) async {
+    final date = DateTime(2026, 9, 29);
+    final meal = Meal(
+      dateTime: date,
+      mealType: MealType.dinner,
+      name: '识别失败的餐食',
+      aiRecognitionStatus: AiRecognitionStatus.failed,
+      createdAt: date,
+      updatedAt: date,
+    );
+    var retryCount = 0;
+    final router = GoRouter(
+      initialLocation: '/',
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => Scaffold(
+            body: MealSection(
+              mealType: MealType.dinner,
+              meals: [meal],
+              selectedDate: date,
+              onRetryRecognition: (_) => retryCount++,
+            ),
+          ),
+        ),
+        GoRoute(
+          path: '/meal-view',
+          builder: (context, state) =>
+              const Scaffold(body: Text('Meal detail')),
+        ),
+      ],
+    );
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    final photoCenter = tester.getCenter(find.byIcon(Icons.restaurant));
+
+    await tester.tapAt(photoCenter);
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.tapAt(photoCenter);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(retryCount, 1);
+    expect(find.text('Meal detail'), findsNothing);
+    router.dispose();
+  });
+
   group('FoodCategory', () {
     test('classifies common food names into broad guideline groups', () {
       expect(FoodCategory.classify('糙米饭'), FoodCategory.grains);
+      expect(FoodCategory.classify('红豆'), FoodCategory.grains);
       expect(FoodCategory.classify('西兰花'), FoodCategory.vegetablesAndFruits);
       expect(FoodCategory.classify('苹果'), FoodCategory.vegetablesAndFruits);
       expect(FoodCategory.classify('鸡蛋'), FoodCategory.meatEggsAndSeafood);
-      expect(FoodCategory.classify('牛奶'), FoodCategory.dairy);
-      expect(FoodCategory.classify('核桃'), FoodCategory.beansAndNuts);
+      expect(FoodCategory.classify('牛奶'), FoodCategory.dairyBeansAndNuts);
+      expect(FoodCategory.classify('豆腐'), FoodCategory.dairyBeansAndNuts);
+      expect(FoodCategory.classify('核桃'), FoodCategory.dairyBeansAndNuts);
       expect(FoodCategory.classify('咖啡'), isNull);
+      expect(
+        FoodCategory.values.where((category) => category != FoodCategory.other),
+        [
+          FoodCategory.grains,
+          FoodCategory.vegetablesAndFruits,
+          FoodCategory.meatEggsAndSeafood,
+          FoodCategory.dairyBeansAndNuts,
+        ],
+      );
+      expect(FoodCategory.fromId('dairy'), FoodCategory.dairyBeansAndNuts);
+      expect(FoodCategory.fromId('beans_nuts'), FoodCategory.dairyBeansAndNuts);
     });
 
     test(

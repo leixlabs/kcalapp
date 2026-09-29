@@ -113,25 +113,25 @@ def _select_test_photo(driver) -> None:
 
 
 def _open_calendar_and_select_today(driver) -> None:
-    date_button = helpers.wait_for_any(
-        driver,
-        [
-            helpers.by_label_contains("选择日期"),
-            helpers.by_label_contains("今天"),
-            helpers.by_label_contains("昨日"),
-        ],
-        timeout=12,
-    )
+    date_locators = [
+        helpers.by_label_contains("选择日期"),
+        helpers.by_label_contains("今天"),
+        helpers.by_label_contains("昨日"),
+    ]
+    for _ in range(10):
+        if any(helpers.exists(driver, locator) for locator in date_locators):
+            break
+        helpers.scroll_up(driver, ratio=0.65)
+        time.sleep(0.2)
+    date_button = helpers.wait_for_any(driver, date_locators, timeout=12)
     date_button.click()
 
     today = time.localtime()
-    today_label = f"{today.tm_year}年{today.tm_mon}月{today.tm_mday}日"
-    locator = (
-        AppiumBy.IOS_PREDICATE,
-        'type == "XCUIElementTypeStaticText" AND label CONTAINS[c] '
-        f'"{today_label}"',
+    today_cell = helpers.wait_for(
+        driver,
+        helpers.by_label_contains(f"{today.tm_mday}日"),
+        timeout=15,
     )
-    today_cell = helpers.wait_for(driver, locator, timeout=15)
     today_cell.click()
     helpers.wait_for(driver, helpers.by_label_contains("拍照识别热量"), timeout=15)
 
@@ -169,23 +169,19 @@ def test_configure_recognize_and_review_daily_detail(driver):
     helpers.tap_text(driver, "保存")
     helpers.wait_for(driver, helpers.by_label_contains(profile_name), timeout=20)
 
-    # 2. Recognize a simulator photo and persist the deterministic mock result.
+    # 2. Save the simulator photo first, then verify background recognition.
     _return_home_from_settings(driver)
     fab = helpers.wait_for(driver, helpers.by_label_contains("拍照识别热量"))
     helpers.long_press(driver, fab)
     _select_test_photo(driver)
 
-    helpers.wait_for(driver, helpers.by_label("AI 识别结果"), timeout=45)
-    name_fields = driver.find_elements(AppiumBy.CLASS_NAME, "XCUIElementTypeTextField")
-    recognized_names = [field.get_attribute("value") or "" for field in name_fields]
-    assert MEAL_NAME in recognized_names, (
-        f"Unexpected recognition result name field values: {recognized_names}"
-    )
-
-    helpers.tap_text(driver, "保存记录")
     helpers.wait_for(driver, helpers.by_label_contains("拍照识别热量"), timeout=20)
+    assert helpers.scroll_to_text(driver, "AI 正在识别食物", max_swipes=8) or \
+        helpers.scroll_to_text(driver, MEAL_NAME, max_swipes=8), (
+        "The saved meal did not show processing or completed recognition"
+    )
     assert helpers.scroll_to_text(driver, MEAL_NAME, max_swipes=8), (
-        "Saved recognition result is missing from the home diary"
+        "Background recognition did not update the saved meal in the home diary"
     )
     image_requests = _wait_for_image_request()
     assert any(request.get("model") == profile_model for request in image_requests), (
@@ -199,7 +195,7 @@ def test_configure_recognize_and_review_daily_detail(driver):
     assert helpers.exists(driver, helpers.by_label_contains("食物类别 · 本周")), (
         "Home diary does not show the weekly food-category section"
     )
-    for category in ("谷薯类", "蔬菜水果", "肉蛋水产", "奶类", "豆类坚果"):
+    for category in ("谷薯类", "蔬菜水果", "动物性食物", "奶+豆+坚果"):
         assert helpers.exists(driver, helpers.by_label_contains(category)), (
             f"Weekly food-category progress is missing {category!r}"
         )
@@ -267,7 +263,9 @@ def test_configure_recognize_and_review_daily_detail(driver):
     helpers.wait_for(driver, helpers.by_label("修改餐名"), timeout=10)
     _fill_field(driver, 0, f"{MEAL_NAME} edited")
     helpers.tap_text(driver, "保存", timeout=12)
-    helpers.tap_text(driver, "更新", timeout=12)
     assert helpers.wait_for(
         driver, helpers.by_label_contains(f"{MEAL_NAME} edited"), timeout=12
     ), "Inline meal title edit did not appear in the detail page"
+    assert not helpers.exists(driver, helpers.by_label("更新")), (
+        "Meal details should persist edits without a bottom update button"
+    )

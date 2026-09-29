@@ -16,7 +16,7 @@ class AppDatabase {
     final path = p.join(dir.path, 'calory.db');
     return openDatabase(
       path,
-      version: 6,
+      version: 8,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
       onConfigure: (db) async {
@@ -48,6 +48,7 @@ class AppDatabase {
         nutrition_review TEXT,
         servings REAL NOT NULL DEFAULT 1.0,
         source TEXT NOT NULL DEFAULT 'manual',
+        ai_recognition_status TEXT NOT NULL DEFAULT 'none',
         is_deleted INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
         updated_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -82,6 +83,7 @@ class AppDatabase {
         timeout_seconds INTEGER NOT NULL DEFAULT 30,
         is_active INTEGER NOT NULL DEFAULT 0,
         use_json_mode INTEGER NOT NULL DEFAULT 1,
+        response_format_mode INTEGER NOT NULL DEFAULT 2,
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
       )
     ''');
@@ -123,6 +125,19 @@ class AppDatabase {
     }
     if (oldVersion < 6) {
       await db.execute('ALTER TABLE food_items ADD COLUMN category_id TEXT');
+    }
+    if (oldVersion < 7) {
+      await db.execute(
+        'ALTER TABLE llm_profiles ADD COLUMN response_format_mode INTEGER NOT NULL DEFAULT 2',
+      );
+      await db.execute(
+        'UPDATE llm_profiles SET response_format_mode = CASE WHEN use_json_mode = 1 THEN 2 ELSE 0 END',
+      );
+    }
+    if (oldVersion < 8) {
+      await db.execute(
+        "ALTER TABLE meals ADD COLUMN ai_recognition_status TEXT NOT NULL DEFAULT 'none'",
+      );
     }
   }
 

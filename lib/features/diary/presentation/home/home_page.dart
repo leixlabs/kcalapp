@@ -1,14 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:dio/dio.dart';
 
+import '../../../../app/providers.dart';
 import '../../application/diary_providers.dart';
-import '../../../../app/theme.dart';
 import '../../../../core/utils/format_utils.dart';
 import '../../../../core/widgets/states.dart';
 import 'widgets/calorie_ring.dart';
 import 'widgets/meal_section.dart';
+import '../../domain/meal.dart';
 import '../../domain/meal_type.dart';
 import '../../../food_recognition/application/recognition_controller.dart';
 import '../calendar/calendar_page.dart';
@@ -41,7 +43,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           ),
           data: (summary) => CustomScrollView(
             slivers: [
-              // 顶部 App Bar（logo + 日期选择器 + 头像）
+              // 顶部 App Bar（logo + 日期选择器 + 设置按钮）
               SliverToBoxAdapter(child: _buildAppBar(context, selectedDate)),
               SliverToBoxAdapter(
                 child: AnimatedSize(
@@ -189,7 +191,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                     radius: 18,
                     backgroundColor: theme.colorScheme.primaryContainer,
                     child: Icon(
-                      Icons.person_outline,
+                      Icons.settings_outlined,
                       size: 20,
                       color: theme.colorScheme.onPrimaryContainer,
                     ),
@@ -284,7 +286,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           label: '碳水化合物',
           consumed: summary.consumed.carbsG,
           target: summary.target?.carbsG,
-          color: AppColors.carbs,
+          color: const Color(0xFFC89B3C),
           icon: Icons.grain,
         ),
         const SizedBox(width: 12),
@@ -293,7 +295,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           label: '蛋白质',
           consumed: summary.consumed.proteinG,
           target: summary.target?.proteinG,
-          color: AppColors.protein,
+          color: const Color(0xFFC75B4A),
           icon: Icons.egg_outlined,
         ),
         const SizedBox(width: 12),
@@ -302,7 +304,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           label: '脂肪',
           consumed: summary.consumed.fatG,
           target: summary.target?.fatG,
-          color: AppColors.fat,
+          color: const Color(0xFF7A9B55),
           icon: Icons.water_drop_outlined,
         ),
       ],
@@ -407,15 +409,13 @@ class _HomePageState extends ConsumerState<HomePage> {
     final theme = Theme.of(context);
     final hasTarget = target != null && target > 0;
     final progress = hasTarget ? (consumed / target).clamp(0.0, 1.0) : 0.0;
-    final isOver = hasTarget && consumed > target;
-
     return Expanded(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, size: 14, color: color),
+              Icon(icon, size: 14, color: theme.colorScheme.outline),
               const SizedBox(width: 5),
               Expanded(
                 child: Text(
@@ -437,9 +437,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                   text: _formatG(consumed),
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: isOver
-                        ? theme.colorScheme.error
-                        : theme.colorScheme.onSurface,
+                    color: theme.colorScheme.onSurface,
                   ),
                 ),
                 if (hasTarget)
@@ -465,10 +463,8 @@ class _HomePageState extends ConsumerState<HomePage> {
             child: LinearProgressIndicator(
               value: hasTarget ? progress : null,
               minHeight: 5,
-              backgroundColor: color.withValues(alpha: 0.15),
-              valueColor: AlwaysStoppedAnimation(
-                isOver ? theme.colorScheme.error : color,
-              ),
+              backgroundColor: theme.colorScheme.surfaceContainerHighest,
+              valueColor: AlwaysStoppedAnimation(color),
             ),
           ),
         ],
@@ -500,6 +496,20 @@ class _HomePageState extends ConsumerState<HomePage> {
                 mealType: type,
                 meals: summary.meals,
                 selectedDate: selectedDate,
+                onRetryRecognition: (meal) {
+                  final photoPath = meal.photoPath;
+                  if (meal.id != null && photoPath != null) {
+                    unawaited(
+                      _processRecognition(
+                        ScaffoldMessenger.of(context),
+                        ref.read(recognitionControllerProvider),
+                        meal.id!,
+                        photoPath,
+                        meal.mealType,
+                      ),
+                    );
+                  }
+                },
               ),
             ),
           ),
@@ -547,11 +557,6 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   void _takePhotoAndAnalyze(BuildContext context, WidgetRef ref) async {
     final controller = ref.read(recognitionControllerProvider);
-    if (!await controller.isLlmConfigured()) {
-      if (!context.mounted) return;
-      _showLlmMissingDialog(context);
-      return;
-    }
     final mealType = MealType.guessFromHour(DateTime.now().hour);
     final photo = await controller.takePhoto();
     if (photo == null || !context.mounted) return;
@@ -560,11 +565,6 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   void _pickFromGalleryAndAnalyze(BuildContext context, WidgetRef ref) async {
     final controller = ref.read(recognitionControllerProvider);
-    if (!await controller.isLlmConfigured()) {
-      if (!context.mounted) return;
-      _showLlmMissingDialog(context);
-      return;
-    }
     final mealType = MealType.guessFromHour(DateTime.now().hour);
     final photo = await controller.pickFromGallery();
     if (photo == null || !context.mounted) return;
@@ -577,99 +577,70 @@ class _HomePageState extends ConsumerState<HomePage> {
     String photoPath,
     MealType mealType,
   ) async {
-    final cancelToken = CancelToken();
-    var dialogClosed = false;
-
-    void closeDialog() {
-      if (dialogClosed || !context.mounted) return;
-      dialogClosed = true;
-      Navigator.of(context, rootNavigator: true).pop();
-    }
-
-    _showRecognizingDialog(
-      context,
-      onCancel: () {
-        if (!cancelToken.isCancelled) cancelToken.cancel('user_cancelled');
-        closeDialog();
-      },
-    ).then((_) => dialogClosed = true);
-    await Future.delayed(const Duration(milliseconds: 50));
-    if (cancelToken.isCancelled) return;
-
+    final messenger = ScaffoldMessenger.of(context);
+    String? savedPhotoPath;
     try {
-      await controller.recognize(
-        photoPath,
-        mealTypeHint: mealType,
-        cancelToken: cancelToken,
+      final savedPhoto = await ref
+          .read(imageProcessorProvider)
+          .saveMealPhoto(photoPath);
+      savedPhotoPath = savedPhoto.path;
+      final persistedPhotoPath = savedPhoto.path;
+      final now = DateTime.now();
+      final mealId = await ref
+          .read(mealRepositoryProvider)
+          .saveMeal(
+            Meal(
+              dateTime: now,
+              mealType: mealType,
+              name: 'AI 识别中',
+              photoPath: persistedPhotoPath,
+              source: 'ai',
+              aiRecognitionStatus: AiRecognitionStatus.processing,
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
+      ref.invalidate(dailySummaryProvider);
+      ref.invalidate(weeklyFoodCategoryProgressProvider);
+      unawaited(
+        _processRecognition(
+          messenger,
+          controller,
+          mealId,
+          persistedPhotoPath,
+          mealType,
+        ),
       );
-      closeDialog();
-      if (cancelToken.isCancelled) return;
-      if (context.mounted) context.push('/recognition-result');
-    } on RecognitionCancelledException {
-      closeDialog();
     } catch (e) {
-      closeDialog();
-      if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('$e')));
+      if (savedPhotoPath != null) {
+        await ref.read(imageProcessorProvider).deleteFile(savedPhotoPath);
+      }
+      if (messenger.mounted) {
+        messenger.showSnackBar(SnackBar(content: Text('保存饮食记录失败：$e')));
       }
     }
   }
 
-  Future<void> _showRecognizingDialog(
-    BuildContext context, {
-    required VoidCallback onCancel,
-  }) {
-    return showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => PopScope(
-        canPop: false,
-        child: Dialog(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircularProgressIndicator(),
-                    SizedBox(width: 20),
-                    Text('AI 识别中...'),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                TextButton(onPressed: onCancel, child: const Text('取消')),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showLlmMissingDialog(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('未配置 LLM 服务'),
-        content: const Text('AI 识别需要先在设置中添加 LLM 服务并填写 API Key。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              context.push('/llm-settings');
-            },
-            child: const Text('去设置'),
-          ),
-        ],
-      ),
-    );
+  Future<void> _processRecognition(
+    ScaffoldMessengerState messenger,
+    RecognitionController controller,
+    int mealId,
+    String photoPath,
+    MealType mealType,
+  ) async {
+    try {
+      await controller.recognizeSavedMeal(
+        mealId,
+        photoPath: photoPath,
+        mealType: mealType,
+      );
+    } catch (e) {
+      if (messenger.mounted) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('AI 识别失败，记录已保留，可双击图片重试')),
+        );
+      }
+    }
   }
 }
 

@@ -2,6 +2,8 @@ import 'food_item.dart';
 import 'nutrition.dart';
 import 'meal_type.dart';
 
+enum AiRecognitionStatus { none, processing, failed, completed }
+
 class Meal {
   final int? id;
   final DateTime dateTime;
@@ -11,6 +13,7 @@ class Meal {
   final String? nutritionReview;
   final double servings;
   final String source;
+  final AiRecognitionStatus aiRecognitionStatus;
   final List<FoodItem> foodItems;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -24,6 +27,7 @@ class Meal {
     this.nutritionReview,
     this.servings = 1.0,
     this.source = 'manual',
+    this.aiRecognitionStatus = AiRecognitionStatus.none,
     this.foodItems = const [],
     required this.createdAt,
     required this.updatedAt,
@@ -52,6 +56,7 @@ class Meal {
     String? nutritionReview,
     double? servings,
     String? source,
+    AiRecognitionStatus? aiRecognitionStatus,
     List<FoodItem>? foodItems,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -65,6 +70,7 @@ class Meal {
       nutritionReview: nutritionReview ?? this.nutritionReview,
       servings: servings ?? this.servings,
       source: source ?? this.source,
+      aiRecognitionStatus: aiRecognitionStatus ?? this.aiRecognitionStatus,
       foodItems: foodItems ?? this.foodItems,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,

@@ -25,6 +25,7 @@ class MealViewPage extends ConsumerStatefulWidget {
 class _MealViewPageState extends ConsumerState<MealViewPage> {
   Meal? _meal;
   bool _isLoading = true;
+  Future<void> _saveQueue = Future<void>.value();
 
   @override
   void initState() {
@@ -193,9 +194,7 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
                             .toList(),
                         onChanged: (type) {
                           if (type != null) {
-                            setState(
-                              () => _meal = meal.copyWith(mealType: type),
-                            );
+                            _updateMeal(meal.copyWith(mealType: type));
                           }
                         },
                       ),
@@ -362,24 +361,8 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
           ))
             SliverToBoxAdapter(child: _buildMicronutrients(meal, theme)),
 
-          const SliverToBoxAdapter(child: SizedBox(height: 100)),
+          const SliverToBoxAdapter(child: SizedBox(height: 24)),
         ],
-      ),
-      // ── 底部：在当前详情页确认修改 ───────────────────────────────────
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-          child: FilledButton(
-            onPressed: _saveChanges,
-            style: FilledButton.styleFrom(
-              minimumSize: const Size(double.infinity, 52),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-            ),
-            child: const Text('更新'),
-          ),
-        ),
       ),
     );
   }
@@ -511,11 +494,27 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
                 (item) => item.getMineral(mineral) != null,
               ),
             )
+            .where(
+              (mineral) =>
+                  _sumKnownValues(
+                        meal.foodItems.map((item) => item.getMineral(mineral)),
+                      ) *
+                      meal.servings >=
+                  0.05,
+            )
             .toList();
     final vitamins = Vitamin.values
         .where(
           (vitamin) =>
               meal.foodItems.any((item) => item.getVitamin(vitamin) != null),
+        )
+        .where(
+          (vitamin) =>
+              _sumKnownValues(
+                    meal.foodItems.map((item) => item.getVitamin(vitamin)),
+                  ) *
+                  meal.servings >=
+              0.05,
         )
         .toList();
     if (minerals.isEmpty && vitamins.isEmpty) return const SizedBox.shrink();
@@ -671,7 +670,7 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
       ),
     );
     if (saved == true && mounted && controller.text.trim().isNotEmpty) {
-      setState(() => _meal = meal.copyWith(name: controller.text.trim()));
+      await _updateMeal(meal.copyWith(name: controller.text.trim()));
     }
     controller.dispose();
   }
@@ -725,17 +724,17 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
       } else {
         final items = [...meal.foodItems];
         items[index] = item.copyWith(name: name, kcal: kcal);
-        setState(() => _meal = meal.copyWith(foodItems: items));
+        await _updateMeal(meal.copyWith(foodItems: items));
       }
     }
     nameController.dispose();
     kcalController.dispose();
   }
 
-  void _removeFoodItem(int index) {
+  Future<void> _removeFoodItem(int index) async {
     final meal = _meal!;
     final items = [...meal.foodItems]..removeAt(index);
-    setState(() => _meal = meal.copyWith(foodItems: items));
+    await _updateMeal(meal.copyWith(foodItems: items));
   }
 
   Future<void> _editNutrient(_EditableNutrient nutrient) async {
@@ -771,7 +770,9 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
       currentValue,
       maxValue,
     );
-    if (changed != null && mounted) _scaleNutrient(nutrient, changed);
+    if (changed != null && mounted) {
+      await _scaleNutrient(nutrient, changed);
+    }
   }
 
   Future<double?> _showNutrientSlider(
@@ -833,7 +834,10 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
     );
   }
 
-  void _scaleNutrient(_EditableNutrient nutrient, double targetPerServing) {
+  Future<void> _scaleNutrient(
+    _EditableNutrient nutrient,
+    double targetPerServing,
+  ) async {
     final meal = _meal!;
     if (meal.foodItems.isEmpty) return;
     double valueFor(FoodItem item) => switch (nutrient) {
@@ -858,14 +862,14 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
         _EditableNutrient.fat => item.copyWith(fatG: value),
       };
     }).toList();
-    setState(() => _meal = meal.copyWith(foodItems: items));
+    await _updateMeal(meal.copyWith(foodItems: items));
   }
 
   Future<void> _editMicronutrient(
     String label,
     String unit,
     double currentValue,
-    ValueChanged<double> onSave,
+    Future<void> Function(double) onSave,
   ) async {
     final controller = TextEditingController(
       text: currentValue.toStringAsFixed(1),
@@ -898,14 +902,14 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
         ScaffoldMessenger.of(context)
             .showSnackBar(const SnackBar(content: Text('请输入有效的营养素含量')));
       } else {
-        onSave(value);
+        await onSave(value);
       }
     }
     controller.dispose();
   }
 
-  void _scaleMineral(Mineral mineral, double targetPerServing) {
-    _scaleMicronutrient(
+  Future<void> _scaleMineral(Mineral mineral, double targetPerServing) {
+    return _scaleMicronutrient(
       targetPerServing,
       (item, values) => item.copyWith(minerals: values),
       (item) => item.getMineral(mineral),
@@ -915,8 +919,8 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
     );
   }
 
-  void _scaleVitamin(Vitamin vitamin, double targetPerServing) {
-    _scaleMicronutrient(
+  Future<void> _scaleVitamin(Vitamin vitamin, double targetPerServing) {
+    return _scaleMicronutrient(
       targetPerServing,
       (item, values) => item.copyWith(vitamins: values),
       (item) => item.getVitamin(vitamin),
@@ -926,14 +930,14 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
     );
   }
 
-  void _scaleMicronutrient(
+  Future<void> _scaleMicronutrient(
     double targetPerServing,
     FoodItem Function(FoodItem, List<double?>) copyWithValues,
     double? Function(FoodItem) getValue,
     List<double?>? Function(FoodItem) getValues,
     void Function(List<double?>, double) setValue,
     int listLength,
-  ) {
+  ) async {
     final meal = _meal!;
     final oldTotal = _sumKnownValues(meal.foodItems.map(getValue));
     final items = meal.foodItems.map((item) {
@@ -946,28 +950,27 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
       setValue(values, targetPerServing * share);
       return copyWithValues(item, values);
     }).toList();
-    setState(() => _meal = meal.copyWith(foodItems: items));
+    await _updateMeal(meal.copyWith(foodItems: items));
   }
 
-  Future<void> _saveChanges() async {
-    final meal = _meal;
-    if (meal == null || meal.id == null) return;
-    try {
-      await ref
-          .read(mealRepositoryProvider)
-          .updateMeal(meal.copyWith(updatedAt: DateTime.now()));
-      ref.invalidate(dailySummaryProvider);
-      ref.invalidate(weeklyFoodCategoryProgressProvider);
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('已更新')));
+  Future<void> _updateMeal(Meal updatedMeal) {
+    if (updatedMeal.id == null) return Future<void>.value();
+    _saveQueue = _saveQueue.then((_) async {
+      final mealToSave = updatedMeal.copyWith(updatedAt: DateTime.now());
+      try {
+        await ref.read(mealRepositoryProvider).updateMeal(mealToSave);
+        if (!mounted) return;
+        setState(() => _meal = mealToSave);
+        ref.invalidate(dailySummaryProvider);
+        ref.invalidate(weeklyFoodCategoryProgressProvider);
+      } catch (error) {
+        if (mounted) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text('保存失败: $error')));
+        }
       }
-    } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('更新失败: $error')));
-      }
-    }
+    });
+    return _saveQueue;
   }
 
   String _fmtG(double v) =>

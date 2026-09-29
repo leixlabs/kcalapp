@@ -21,7 +21,8 @@ class FoodCategoryProgressCard extends StatelessWidget {
             category: category,
             grams: weeklyGrams[category] ?? 0,
           ),
-          if (category != FoodCategory.beansAndNuts) const SizedBox(height: 14),
+          if (category != FoodCategory.dairyBeansAndNuts)
+            const SizedBox(height: 14),
         ],
         const SizedBox(height: 12),
         Text(
@@ -91,8 +92,7 @@ class _CategoryProgressRow extends StatelessWidget {
         FoodCategory.grains => const Color(0xFFBF8D42),
         FoodCategory.vegetablesAndFruits => const Color(0xFF4D9A65),
         FoodCategory.meatEggsAndSeafood => const Color(0xFFD77A66),
-        FoodCategory.dairy => const Color(0xFF598DBB),
-        FoodCategory.beansAndNuts => theme.colorScheme.tertiary,
+        FoodCategory.dairyBeansAndNuts => theme.colorScheme.tertiary,
         FoodCategory.other => theme.colorScheme.outline,
       };
 }

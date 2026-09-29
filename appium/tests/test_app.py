@@ -526,7 +526,7 @@ class Test9GoalSettings:
 
 
 # ---------------------------------------------------------------------------
-# 10. Long-press FAB -> gallery -> AI recognition -> save record
+# 10. Long-press FAB -> gallery -> save record -> background AI recognition
 # ---------------------------------------------------------------------------
 class Test10RecognizeAndSave:
     def test_recognize_from_gallery_and_save(self, driver):
@@ -571,24 +571,13 @@ class Test10RecognizeAndSave:
             )
             cells[0].click()
 
-        # "AI 识别中..." banner is transient; don't hard-fail if we miss it
-        helpers.exists(driver, helpers.by_label_contains("AI 识别中"))
-
-        helpers.wait_for(driver, helpers.by_label("AI 识别结果"), timeout=40)
-        recognized_names = [
-            field.get_attribute("value") or ""
-            for field in driver.find_elements(
-                AppiumBy.CLASS_NAME, "XCUIElementTypeTextField"
-            )
-        ]
-        assert "测试早餐组合" in recognized_names, (
-            f"Recognition result meal name missing from text field: {recognized_names}"
-        )
-
-        helpers.tap_text(driver, "保存记录")
         helpers.wait_for(driver, helpers.by_label_contains("拍照识别热量"), timeout=20)
+        assert helpers.scroll_to_text(driver, "AI 正在识别食物", max_swipes=6) or \
+            helpers.scroll_to_text(driver, "测试早餐组合", max_swipes=6), (
+            "The saved meal did not show a processing state or completed recognition"
+        )
         assert helpers.scroll_to_text(driver, "测试早餐组合", max_swipes=6), (
-            "Saved meal did not appear on the home screen"
+            "Background recognition did not update the saved meal"
         )
 
         reqs = helpers.mock_server_get("/requests")
@@ -657,7 +646,9 @@ class Test13MealInlineEdit:
         helpers.wait_for(driver, helpers.by_label("修改餐名"), timeout=10)
         _fill_textfield_by_label(driver, "餐名", "测试早餐组合 edited")
         helpers.tap_text(driver, "保存", timeout=12)
-        helpers.tap_text(driver, "更新", timeout=12)
+        assert not helpers.exists(driver, helpers.by_label("更新")), (
+            "Meal details should persist edits without a bottom update button"
+        )
         assert helpers.scroll_to_text(driver, "测试早餐组合 edited", max_swipes=6)
         assert helpers.exists(driver, helpers.by_label_contains("测试早餐组合 edited"))
         _reset_to_home(driver)

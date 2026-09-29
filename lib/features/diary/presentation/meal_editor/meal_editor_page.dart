@@ -363,6 +363,8 @@ class _MealEditorPageState extends ConsumerState<MealEditorPage> {
       nutritionReview: _existingMeal?.nutritionReview,
       servings: servings,
       source: _existingMeal?.source ?? 'manual',
+      aiRecognitionStatus:
+          _existingMeal?.aiRecognitionStatus ?? AiRecognitionStatus.none,
       foodItems: foodItems,
       createdAt: _existingMeal?.createdAt ?? now,
       updatedAt: now,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../data/llm/llm_adapter.dart';
 import '../domain/llm_profile.dart';
 import '../../../app/providers.dart';
@@ -34,7 +35,10 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     if (_isLoading) {
-      return Scaffold(appBar: AppBar(title: const Text('LLM 设置')), body: const Center(child: CircularProgressIndicator()));
+      return Scaffold(
+        appBar: AppBar(title: const Text('LLM 设置')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
     }
 
     // Layout:
@@ -50,6 +54,7 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
         itemBuilder: (context, index) {
           if (index == 0) {
             return Card(
+              margin: const EdgeInsets.only(bottom: 12),
               child: ListTile(
                 leading: const Icon(Icons.add_circle, color: Colors.green),
                 title: const Text('添加新配置'),
@@ -59,8 +64,12 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
           }
           if (index == 1) {
             return Card(
+              margin: const EdgeInsets.only(bottom: 12),
               child: ListTile(
-                leading: const Icon(Icons.bug_report_outlined, color: Colors.deepOrange),
+                leading: const Icon(
+                  Icons.bug_report_outlined,
+                  color: Colors.deepOrange,
+                ),
                 title: const Text('HTTP 调试面板'),
                 subtitle: const Text('查看 LLM 请求 / 响应（alice）'),
                 trailing: const Icon(Icons.chevron_right),
@@ -74,10 +83,24 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
                 padding: const EdgeInsets.all(32),
                 child: Column(
                   children: [
-                    Icon(Icons.cloud_off, size: 48, color: theme.colorScheme.outline),
+                    Icon(
+                      Icons.cloud_off,
+                      size: 48,
+                      color: theme.colorScheme.outline,
+                    ),
                     const SizedBox(height: 8),
-                    Text('暂无配置，请添加 LLM 服务', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.outline)),
-                    Text('添加后即可使用拍照识别功能', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline)),
+                    Text(
+                      '暂无配置，请添加 LLM 服务',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.outline,
+                      ),
+                    ),
+                    Text(
+                      '添加后即可使用拍照识别功能',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.outline,
+                      ),
+                    ),
                   ],
                 ),
               );
@@ -86,6 +109,7 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
           }
           final profile = _profiles[index - 3];
           return Card(
+            margin: const EdgeInsets.only(bottom: 12),
             child: ListTile(
               leading: GestureDetector(
                 onTap: () async {
@@ -96,12 +120,20 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
                   }
                 },
                 child: Icon(
-                  profile.isActive ? Icons.check_circle : Icons.radio_button_unchecked,
-                  color: profile.isActive ? Colors.green : theme.colorScheme.outline,
+                  profile.isActive
+                      ? Icons.check_circle
+                      : Icons.radio_button_unchecked,
+                  color: profile.isActive
+                      ? Colors.green
+                      : theme.colorScheme.outline,
                 ),
               ),
               title: Text(profile.displayName),
-              subtitle: Text('${profile.model}\n${profile.baseUrl}', maxLines: 2, overflow: TextOverflow.ellipsis),
+              subtitle: Text(
+                '${profile.model}\n${profile.baseUrl}',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
               isThreeLine: true,
               onTap: () => _showProfileForm(context, profile: profile),
               trailing: IconButton(
@@ -120,7 +152,9 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
     final urlCtrl = TextEditingController(text: profile?.baseUrl ?? '');
     final modelCtrl = TextEditingController(text: profile?.model ?? '');
     final keyCtrl = TextEditingController();
-    final timeoutCtrl = TextEditingController(text: (profile?.timeoutSeconds ?? 30).toString());
+    final timeoutCtrl = TextEditingController(
+      text: (profile?.timeoutSeconds ?? 30).toString(),
+    );
     final isEditing = profile != null;
 
     showModalBottomSheet(
@@ -133,10 +167,20 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
         modelCtrl: modelCtrl,
         keyCtrl: keyCtrl,
         timeoutCtrl: timeoutCtrl,
-        initialUseJsonMode: profile?.useJsonMode ?? true,
+        initialResponseFormat:
+            profile?.responseFormat ?? LlmResponseFormat.jsonSchema,
         isEditing: isEditing,
         existing: profile,
-        onSave: (useJsonMode) => _saveProfile(context, profile, nameCtrl, urlCtrl, modelCtrl, keyCtrl, timeoutCtrl, useJsonMode),
+        onSave: (responseFormat) => _saveProfile(
+          context,
+          profile,
+          nameCtrl,
+          urlCtrl,
+          modelCtrl,
+          keyCtrl,
+          timeoutCtrl,
+          responseFormat,
+        ),
       ),
     );
   }
@@ -149,10 +193,13 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
     TextEditingController model,
     TextEditingController key,
     TextEditingController timeout,
-    bool useJsonMode,
+    LlmResponseFormat responseFormat,
   ) async {
-    if (name.text.trim().isEmpty || url.text.trim().isEmpty || model.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('请填写所有必填字段')));
+    if (name.text.trim().isEmpty ||
+        url.text.trim().isEmpty ||
+        model.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('请填写所有必填字段')));
       return;
     }
 
@@ -161,29 +208,33 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
     final secureStore = ref.read(secureStoreProvider);
 
     if (existing != null) {
-      await dao.updateProfile(LlmProfile(
-        id: existing.id,
-        displayName: name.text.trim(),
-        baseUrl: url.text.trim(),
-        model: model.text.trim(),
-        timeoutSeconds: timeoutVal,
-        isActive: existing.isActive,
-        createdAt: existing.createdAt,
-        useJsonMode: useJsonMode,
-      ));
+      await dao.updateProfile(
+        LlmProfile(
+          id: existing.id,
+          displayName: name.text.trim(),
+          baseUrl: url.text.trim(),
+          model: model.text.trim(),
+          timeoutSeconds: timeoutVal,
+          isActive: existing.isActive,
+          createdAt: existing.createdAt,
+          responseFormat: responseFormat,
+        ),
+      );
       if (key.text.isNotEmpty) {
         await secureStore.write('${existing.id}', key.text);
       }
     } else {
-      final id = await dao.insertProfile(LlmProfile(
-        displayName: name.text.trim(),
-        baseUrl: url.text.trim(),
-        model: model.text.trim(),
-        timeoutSeconds: timeoutVal,
-        isActive: true,
-        createdAt: DateTime.now(),
-        useJsonMode: useJsonMode,
-      ));
+      final id = await dao.insertProfile(
+        LlmProfile(
+          displayName: name.text.trim(),
+          baseUrl: url.text.trim(),
+          model: model.text.trim(),
+          timeoutSeconds: timeoutVal,
+          isActive: true,
+          createdAt: DateTime.now(),
+          responseFormat: responseFormat,
+        ),
+      );
       if (key.text.isNotEmpty) {
         await secureStore.write('$id', key.text);
       }
@@ -200,9 +251,14 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
       context: context,
       builder: (dialogCtx) => AlertDialog(
         title: const Text('delete profile'),
-        content: Text('delete profile "${profile.displayName}"? API key will also be removed.'),
+        content: Text(
+          'delete profile "${profile.displayName}"? API key will also be removed.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('cancel'),
+          ),
           TextButton(
             onPressed: () async {
               final dao = ref.read(llmProfileDaoProvider);
@@ -232,10 +288,10 @@ class _ProfileForm extends StatefulWidget {
   final TextEditingController modelCtrl;
   final TextEditingController keyCtrl;
   final TextEditingController timeoutCtrl;
-  final bool initialUseJsonMode;
+  final LlmResponseFormat initialResponseFormat;
   final bool isEditing;
   final LlmProfile? existing;
-  final Future<void> Function(bool useJsonMode) onSave;
+  final Future<void> Function(LlmResponseFormat responseFormat) onSave;
 
   const _ProfileForm({
     required this.ref,
@@ -244,7 +300,7 @@ class _ProfileForm extends StatefulWidget {
     required this.modelCtrl,
     required this.keyCtrl,
     required this.timeoutCtrl,
-    required this.initialUseJsonMode,
+    required this.initialResponseFormat,
     required this.isEditing,
     required this.existing,
     required this.onSave,
@@ -258,12 +314,12 @@ class _ProfileFormState extends State<_ProfileForm> {
   bool _validating = false;
   String? _validationMessage;
   bool _validationSuccess = false;
-  late bool _useJsonMode;
+  late LlmResponseFormat _responseFormat;
 
   @override
   void initState() {
     super.initState();
-    _useJsonMode = widget.initialUseJsonMode;
+    _responseFormat = widget.initialResponseFormat;
   }
 
   Future<void> _handleValidate() async {
@@ -281,14 +337,18 @@ class _ProfileFormState extends State<_ProfileForm> {
       final timeout = widget.timeoutCtrl;
       final profile = widget.existing;
 
-      if (name.text.trim().isEmpty || url.text.trim().isEmpty || model.text.trim().isEmpty) {
+      if (name.text.trim().isEmpty ||
+          url.text.trim().isEmpty ||
+          model.text.trim().isEmpty) {
         _showResult('请先填写名称、Base URL 和模型名', success: false);
         return;
       }
 
       final apiKey = key.text.isNotEmpty
           ? key.text
-          : (profile?.id != null ? await ref.read(secureStoreProvider).read('${profile!.id}') : null);
+          : (profile?.id != null
+                ? await ref.read(secureStoreProvider).read('${profile!.id}')
+                : null);
 
       if (apiKey == null || apiKey.isEmpty) {
         _showResult('请填写 API Key', success: false);
@@ -304,19 +364,25 @@ class _ProfileFormState extends State<_ProfileForm> {
         timeoutSeconds: timeoutVal,
         isActive: profile?.isActive ?? false,
         createdAt: profile?.createdAt ?? DateTime.now(),
-        useJsonMode: _useJsonMode,
+        responseFormat: _responseFormat,
       );
 
       try {
-        await ref.read(llmAdapterProvider).testConnection(
-              profile: testProfile,
-              apiKey: apiKey,
-            );
+        await ref
+            .read(llmAdapterProvider)
+            .testConnection(profile: testProfile, apiKey: apiKey);
         _showResult('连通正常', success: true);
+      } on LlmConnectionFailure catch (failure) {
+        final message = _connectionErrorMessage(failure.error);
+        final detail = failure.detail;
+        _showResult(
+          detail == null ? '验证失败：$message' : '验证失败：$message（$detail）',
+          success: false,
+        );
       } on LlmConnectionError catch (e) {
-        _showResult(_connectionErrorMessage(e), success: false);
+        _showResult('验证失败：${_connectionErrorMessage(e)}', success: false);
       } catch (e) {
-        _showResult('未知错误：$e', success: false);
+        _showResult('验证失败，请检查配置、网络或服务响应', success: false);
       }
     } finally {
       if (mounted) setState(() => _validating = false);
@@ -344,7 +410,16 @@ class _ProfileFormState extends State<_ProfileForm> {
       case LlmConnectionError.parseError:
         return '响应解析失败';
       case LlmConnectionError.unknown:
-        return '未知错误，请打开 HTTP 调试面板查看详情';
+        return '验证失败，请检查 Base URL、API Key 和服务状态';
+      case LlmConnectionError.invalidResponse:
+        return '服务未返回有效内容，请检查模型和接口是否兼容';
+      case LlmConnectionError.responseFormatUnsupported:
+        return switch (_responseFormat) {
+          LlmResponseFormat.jsonSchema =>
+            '服务不支持 JSON Schema，请改用 JSON Mode 或关闭结构化输出',
+          LlmResponseFormat.jsonMode => '服务不支持 JSON Mode，请关闭结构化输出或更换模型',
+          LlmResponseFormat.none => '服务拒绝了请求，请检查模型配置',
+        };
     }
   }
 
@@ -357,116 +432,170 @@ class _ProfileFormState extends State<_ProfileForm> {
         right: 16,
         top: 24,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(widget.isEditing ? '编辑配置' : '添加配置', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 16),
-          TextField(
-            controller: widget.nameCtrl,
-            decoration: const InputDecoration(labelText: '服务名称'),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: widget.urlCtrl,
-            decoration: const InputDecoration(labelText: 'Base URL', hintText: 'https://api.example.com/v1'),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: widget.modelCtrl,
-            decoration: const InputDecoration(labelText: '模型名', hintText: 'gpt-4o'),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: widget.keyCtrl,
-            decoration: InputDecoration(
-              labelText: 'API Key',
-              hintText: widget.isEditing ? '留空则不更新' : 'sk-...',
-              prefixIcon: const Icon(Icons.key),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.isEditing ? '编辑配置' : '添加配置',
+              style: Theme.of(context).textTheme.titleLarge,
             ),
-            obscureText: true,
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: widget.timeoutCtrl,
-            decoration: const InputDecoration(labelText: '超时（秒）'),
-            keyboardType: TextInputType.number,
-          ),
-          const SizedBox(height: 4),
-          SwitchListTile(
-            value: _useJsonMode,
-            onChanged: _validating ? null : (v) => setState(() => _useJsonMode = v),
-            title: const Text('JSON Mode'),
-            subtitle: const Text('强制模型返回合法 JSON（response_format），不支持时请关闭'),
-            contentPadding: EdgeInsets.zero,
-            dense: true,
-          ),
-          const SizedBox(height: 12),
-          if (_validationMessage != null) ...[
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                color: _validationSuccess ? Colors.green.shade50 : Colors.red.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: _validationSuccess ? Colors.green.shade300 : Colors.red.shade300,
-                ),
+            const SizedBox(height: 24),
+            TextField(
+              controller: widget.nameCtrl,
+              decoration: const InputDecoration(labelText: '服务名称'),
+            ),
+            const SizedBox(height: 20),
+            TextField(
+              controller: widget.urlCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Base URL',
+                hintText: 'https://api.example.com/v1',
               ),
-              child: Row(
-                children: [
-                  Icon(
-                    _validationSuccess ? Icons.check_circle : Icons.error_outline,
-                    size: 18,
-                    color: _validationSuccess ? Colors.green.shade700 : Colors.red.shade700,
+            ),
+            const SizedBox(height: 20),
+            TextField(
+              controller: widget.modelCtrl,
+              decoration: const InputDecoration(
+                labelText: '模型名',
+                hintText: 'gpt-4o',
+              ),
+            ),
+            const SizedBox(height: 20),
+            TextField(
+              controller: widget.keyCtrl,
+              decoration: InputDecoration(
+                labelText: 'API Key',
+                hintText: widget.isEditing ? '留空则不更新' : 'sk-...',
+                prefixIcon: const Icon(Icons.key),
+              ),
+              obscureText: true,
+            ),
+            const SizedBox(height: 20),
+            TextField(
+              controller: widget.timeoutCtrl,
+              decoration: const InputDecoration(labelText: '超时（秒）'),
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 20),
+            DropdownButtonFormField<LlmResponseFormat>(
+              initialValue: _responseFormat,
+              decoration: const InputDecoration(
+                labelText: '结构化输出格式',
+                prefixIcon: Icon(Icons.data_object),
+              ),
+              items: LlmResponseFormat.values
+                  .map(
+                    (format) => DropdownMenuItem(
+                      value: format,
+                      child: Text(format.label),
+                    ),
+                  )
+                  .toList(),
+              onChanged: _validating
+                  ? null
+                  : (format) {
+                      if (format != null) {
+                        setState(() => _responseFormat = format);
+                      }
+                    },
+            ),
+            const SizedBox(height: 8),
+            Text(
+              switch (_responseFormat) {
+                LlmResponseFormat.none =>
+                  '不发送 response_format，模型可能返回非 JSON 文本。',
+                LlmResponseFormat.jsonMode => '使用 response_format: json_object。适用于支持 JSON Mode 但不支持 JSON Schema 的服务。',
+                LlmResponseFormat.jsonSchema =>
+                  '使用 response_format: json_schema，按餐食识别结构约束输出。',
+              },
+              style: Theme.of(context).textTheme.bodySmall
+                  ?.copyWith(color: Theme.of(context).colorScheme.outline),
+            ),
+            const SizedBox(height: 16),
+            if (_validationMessage != null) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: _validationSuccess
+                      ? Colors.green.shade50
+                      : Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: _validationSuccess
+                        ? Colors.green.shade300
+                        : Colors.red.shade300,
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      _validationMessage!,
-                      style: TextStyle(
-                        color: _validationSuccess ? Colors.green.shade900 : Colors.red.shade900,
-                        fontSize: 13,
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      _validationSuccess
+                          ? Icons.check_circle
+                          : Icons.error_outline,
+                      size: 18,
+                      color: _validationSuccess
+                          ? Colors.green.shade700
+                          : Colors.red.shade700,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _validationMessage!,
+                        style: TextStyle(
+                          color: _validationSuccess
+                              ? Colors.green.shade900
+                              : Colors.red.shade900,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-          ],
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              FilledButton.tonalIcon(
-                onPressed: _validating ? null : _handleValidate,
-                icon: _validating
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.wifi_protected_setup),
-                label: const Text('验证连通性'),
-              ),
-              Row(
-                children: [
-                  TextButton(
-                    onPressed: _validating ? null : () => Navigator.pop(context),
-                    child: const Text('取消'),
-                  ),
-                  const SizedBox(width: 8),
-                  FilledButton(
-                    onPressed: _validating ? null : () => widget.onSave(_useJsonMode),
-                    child: Text(widget.isEditing ? '更新' : '保存'),
-                  ),
-                ],
-              ),
+              const SizedBox(height: 12),
             ],
-          ),
-          const SizedBox(height: 16),
-        ],
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                FilledButton.tonalIcon(
+                  onPressed: _validating ? null : _handleValidate,
+                  icon: _validating
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.wifi_protected_setup),
+                  label: const Text('验证连通性'),
+                ),
+                Row(
+                  children: [
+                    TextButton(
+                      onPressed: _validating
+                          ? null
+                          : () => Navigator.pop(context),
+                      child: const Text('取消'),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton(
+                      onPressed: _validating
+                          ? null
+                          : () => widget.onSave(_responseFormat),
+                      child: Text(widget.isEditing ? '更新' : '保存'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
       ),
     );
   }

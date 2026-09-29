@@ -6,12 +6,16 @@ class LlmProfileDao {
   LlmProfileDao(this.db);
 
   Future<List<LlmProfile>> getAll() async {
-    final rows = await db.rawQuery('SELECT * FROM llm_profiles ORDER BY created_at DESC');
+    final rows = await db.rawQuery(
+      'SELECT * FROM llm_profiles ORDER BY created_at DESC',
+    );
     return rows.map(_toDomain).toList();
   }
 
   Future<LlmProfile?> getActive() async {
-    final rows = await db.rawQuery('SELECT * FROM llm_profiles WHERE is_active = 1 LIMIT 1');
+    final rows = await db.rawQuery(
+      'SELECT * FROM llm_profiles WHERE is_active = 1 LIMIT 1',
+    );
     if (rows.isEmpty) return null;
     return _toDomain(rows.first);
   }
@@ -20,10 +24,12 @@ class LlmProfileDao {
     final database = await db.database;
     return database.transaction((tx) async {
       if (profile.isActive) {
-        await tx.rawUpdate('UPDATE llm_profiles SET is_active = 0 WHERE is_active = 1');
+        await tx.rawUpdate(
+          'UPDATE llm_profiles SET is_active = 0 WHERE is_active = 1',
+        );
       }
       return tx.rawInsert(
-        'INSERT INTO llm_profiles (display_name, base_url, model, timeout_seconds, is_active, use_json_mode) VALUES (?, ?, ?, ?, ?, ?)',
+        'INSERT INTO llm_profiles (display_name, base_url, model, timeout_seconds, is_active, use_json_mode, response_format_mode) VALUES (?, ?, ?, ?, ?, ?, ?)',
         [
           profile.displayName,
           profile.baseUrl,
@@ -31,6 +37,7 @@ class LlmProfileDao {
           profile.timeoutSeconds,
           profile.isActive ? 1 : 0,
           profile.useJsonMode ? 1 : 0,
+          profile.responseFormat.index,
         ],
       );
     });
@@ -38,13 +45,14 @@ class LlmProfileDao {
 
   Future<void> updateProfile(LlmProfile profile) async {
     await db.rawUpdate(
-      'UPDATE llm_profiles SET display_name = ?, base_url = ?, model = ?, timeout_seconds = ?, use_json_mode = ? WHERE id = ?',
+      'UPDATE llm_profiles SET display_name = ?, base_url = ?, model = ?, timeout_seconds = ?, use_json_mode = ?, response_format_mode = ? WHERE id = ?',
       [
         profile.displayName,
         profile.baseUrl,
         profile.model,
         profile.timeoutSeconds,
         profile.useJsonMode ? 1 : 0,
+        profile.responseFormat.index,
         profile.id,
       ],
     );
@@ -53,8 +61,12 @@ class LlmProfileDao {
   Future<void> activateProfile(int id) async {
     final database = await db.database;
     await database.transaction((tx) async {
-      await tx.rawUpdate('UPDATE llm_profiles SET is_active = 0 WHERE is_active = 1');
-      await tx.rawUpdate('UPDATE llm_profiles SET is_active = 1 WHERE id = ?', [id]);
+      await tx.rawUpdate(
+        'UPDATE llm_profiles SET is_active = 0 WHERE is_active = 1',
+      );
+      await tx.rawUpdate('UPDATE llm_profiles SET is_active = 1 WHERE id = ?', [
+        id,
+      ]);
     });
   }
 
@@ -66,7 +78,8 @@ class LlmProfileDao {
         [id],
       );
       await tx.rawDelete('DELETE FROM llm_profiles WHERE id = ?', [id]);
-      final wasActive = active.isNotEmpty && (active.first['is_active'] as int? ?? 0) == 1;
+      final wasActive =
+          active.isNotEmpty && (active.first['is_active'] as int? ?? 0) == 1;
       if (wasActive) {
         final remaining = await tx.rawQuery(
           'SELECT id FROM llm_profiles ORDER BY created_at DESC LIMIT 1',
@@ -82,6 +95,15 @@ class LlmProfileDao {
   }
 
   LlmProfile _toDomain(Map<String, dynamic> row) {
+    final legacyMode = (row['use_json_mode'] as int? ?? 1) == 1
+        ? LlmResponseFormat.jsonSchema.index
+        : LlmResponseFormat.none.index;
+    final storedMode = (row['response_format_mode'] as int?) ?? legacyMode;
+    final responseFormat =
+        storedMode >= 0 && storedMode < LlmResponseFormat.values.length
+        ? LlmResponseFormat.values[storedMode]
+        : LlmResponseFormat.jsonSchema;
+
     return LlmProfile(
       id: row['id'] as int?,
       displayName: row['display_name'] as String? ?? '',
@@ -89,7 +111,7 @@ class LlmProfileDao {
       model: row['model'] as String? ?? '',
       timeoutSeconds: row['timeout_seconds'] as int? ?? 30,
       isActive: (row['is_active'] as int?) == 1,
-      useJsonMode: (row['use_json_mode'] as int? ?? 1) == 1,
+      responseFormat: responseFormat,
       createdAt: DateTime.parse(row['created_at'] as String),
     );
   }

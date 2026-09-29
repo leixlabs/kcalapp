@@ -2,11 +2,10 @@ import 'food_item.dart';
 import 'meal.dart';
 
 enum FoodCategory {
-  grains('grains', '谷薯类', 250),
-  vegetablesAndFruits('vegetables_fruits', '蔬菜水果', 650),
-  meatEggsAndSeafood('meat_eggs_seafood', '肉蛋水产', 160),
-  dairy('dairy', '奶类', 300),
-  beansAndNuts('beans_nuts', '豆类坚果', 40),
+  grains('grains', '🌾 谷 薯', 250),
+  vegetablesAndFruits('vegetables_fruits', '🥬 蔬菜 水果', 650),
+  meatEggsAndSeafood('meat_eggs_seafood', '🥩 肉 蛋 水产', 160),
+  dairyBeansAndNuts('dairy_beans_nuts', '🥛 奶 豆 坚果', 340),
   other('other', '其他', 0);
 
   final String id;
@@ -18,6 +17,9 @@ enum FoodCategory {
   double get weeklyReferenceGrams => dailyReferenceGrams * 7;
 
   static FoodCategory? fromId(String? id) {
+    if (id == 'dairy' || id == 'beans_nuts') {
+      return dairyBeansAndNuts;
+    }
     for (final category in values) {
       if (category.id == id) return category == other ? null : category;
     }
@@ -27,8 +29,10 @@ enum FoodCategory {
   static FoodCategory? classify(String name) {
     final normalized = name.toLowerCase().replaceAll(RegExp(r'\s+'), '');
 
-    if (_containsAny(normalized, _dairyKeywords)) return dairy;
-    if (_containsAny(normalized, _beansAndNutsKeywords)) return beansAndNuts;
+    if (_containsAny(normalized, _dairyKeywords) ||
+        _containsAny(normalized, _beansAndNutsKeywords)) {
+      return dairyBeansAndNuts;
+    }
     if (_containsAny(normalized, _meatEggsAndSeafoodKeywords)) {
       return meatEggsAndSeafood;
     }
@@ -65,9 +69,6 @@ enum FoodCategory {
     '腐竹',
     '黄豆',
     '黑豆',
-    '红豆',
-    '绿豆',
-    '鹰嘴豆',
     '毛豆',
     '花生',
     '核桃',
@@ -202,6 +203,9 @@ enum FoodCategory {
   ];
 
   static const _grainsKeywords = [
+    '红豆',
+    '绿豆',
+    '鹰嘴豆',
     '米饭',
     '糙米',
     '大米',
@@ -231,6 +235,9 @@ enum FoodCategory {
     '馄饨',
     '栗子',
     'rice',
+    'redbean',
+    'mungbean',
+    'chickpea',
     'oat',
     'bread',
     'noodle',

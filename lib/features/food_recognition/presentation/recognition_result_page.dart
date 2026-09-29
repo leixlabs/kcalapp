@@ -611,17 +611,39 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
       return vals.fold(0.0, (a, b) => a + b) * _servings;
     }
 
-    final hasMinerals = _foodItems.any((e) => e.minerals != null);
-    final hasVitamins = _foodItems.any((e) => e.vitamins != null);
-
-    if (!hasMinerals && !hasVitamins) return const SizedBox.shrink();
-
     String fmt(double? v, {int decimals = 1}) {
       if (v == null) return '—';
       // 极小值直接显示 0
       if (v < 0.05) return '0';
       return v.toStringAsFixed(decimals);
     }
+
+    final minerals = Mineral.values
+        .map(
+          (mineral) => _MicroCell(
+            symbol: mineral.symbol,
+            label: mineral.label,
+            value: fmt(sumMineral(mineral)),
+            unit: mineral.unit,
+          ),
+        )
+        .where((cell) => cell.value != '0')
+        .toList();
+    final vitamins = Vitamin.values
+        .map(
+          (vitamin) => _MicroCell(
+            symbol: vitamin.label,
+            label: vitamin.fullLabel.replaceFirst('维生素', ''),
+            value: fmt(sumVitamin(vitamin)),
+            unit: vitamin.unit,
+          ),
+        )
+        .where((cell) => cell.value != '0')
+        .toList();
+    final hasMinerals = minerals.isNotEmpty;
+    final hasVitamins = vitamins.isNotEmpty;
+
+    if (!hasMinerals && !hasVitamins) return const SizedBox.shrink();
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -643,19 +665,7 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
               ),
             ),
             const SizedBox(height: 6),
-            _buildMicroRow(
-              theme,
-              Mineral.values
-                  .map(
-                    (m) => _MicroCell(
-                      symbol: m.symbol,
-                      label: m.label,
-                      value: fmt(sumMineral(m)),
-                      unit: m.unit,
-                    ),
-                  )
-                  .toList(),
-            ),
+            _buildMicroRow(theme, minerals),
             const SizedBox(height: 12),
           ],
           if (hasVitamins) ...[
@@ -666,19 +676,7 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
               ),
             ),
             const SizedBox(height: 6),
-            _buildMicroRow(
-              theme,
-              Vitamin.values
-                  .map(
-                    (v) => _MicroCell(
-                      symbol: v.label,
-                      label: v.fullLabel.replaceFirst('维生素', ''),
-                      value: fmt(sumVitamin(v)),
-                      unit: v.unit,
-                    ),
-                  )
-                  .toList(),
-            ),
+            _buildMicroRow(theme, vitamins),
           ],
           const SizedBox(height: 24),
         ],

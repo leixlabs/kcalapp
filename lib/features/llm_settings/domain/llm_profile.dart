@@ -1,3 +1,15 @@
+enum LlmResponseFormat {
+  none,
+  jsonMode,
+  jsonSchema;
+
+  String get label => switch (this) {
+    LlmResponseFormat.none => '关闭结构化输出',
+    LlmResponseFormat.jsonMode => 'JSON Mode',
+    LlmResponseFormat.jsonSchema => 'JSON Schema',
+  };
+}
+
 class LlmProfile {
   final int? id;
   final String displayName;
@@ -6,10 +18,7 @@ class LlmProfile {
   final int timeoutSeconds;
   final bool isActive;
   final DateTime createdAt;
-  /// 是否在请求体中添加 `response_format: {"type": "json_object"}`。
-  /// 开启后模型被强制返回合法 JSON，避免输出 markdown 代码块等非结构化内容。
-  /// 不支持该参数的服务（如部分本地模型）请关闭此选项。
-  final bool useJsonMode;
+  final LlmResponseFormat responseFormat;
 
   const LlmProfile({
     this.id,
@@ -19,8 +28,10 @@ class LlmProfile {
     this.timeoutSeconds = 30,
     this.isActive = false,
     required this.createdAt,
-    this.useJsonMode = true,
+    this.responseFormat = LlmResponseFormat.jsonSchema,
   });
+
+  bool get useJsonMode => responseFormat != LlmResponseFormat.none;
 
   LlmProfile copyWith({
     int? id,
@@ -30,7 +41,7 @@ class LlmProfile {
     int? timeoutSeconds,
     bool? isActive,
     DateTime? createdAt,
-    bool? useJsonMode,
+    LlmResponseFormat? responseFormat,
   }) {
     return LlmProfile(
       id: id ?? this.id,
@@ -40,7 +51,7 @@ class LlmProfile {
       timeoutSeconds: timeoutSeconds ?? this.timeoutSeconds,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
-      useJsonMode: useJsonMode ?? this.useJsonMode,
+      responseFormat: responseFormat ?? this.responseFormat,
     );
   }
 }
