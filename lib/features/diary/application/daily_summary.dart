@@ -3,16 +3,25 @@ import '../domain/nutrition.dart';
 import '../domain/meal.dart';
 import '../domain/meal_type.dart';
 
+Map<DateTime, double> aggregateDailyKcal(Iterable<Meal> meals) {
+  final totals = <DateTime, double>{};
+  for (final meal in meals) {
+    final date = DateTime(
+      meal.dateTime.year,
+      meal.dateTime.month,
+      meal.dateTime.day,
+    );
+    totals[date] = (totals[date] ?? 0) + meal.totalNutrition.kcal;
+  }
+  return totals;
+}
+
 class DailySummary {
   final DateTime date;
   final List<Meal> meals;
   final DailyGoal? goal;
 
-  DailySummary({
-    required this.date,
-    required this.meals,
-    this.goal,
-  });
+  DailySummary({required this.date, required this.meals, this.goal});
 
   Nutrition get consumed {
     if (meals.isEmpty) return Nutrition.zero;
@@ -57,8 +66,10 @@ class DailySummary {
   }
 
   double get carbsProgress => _macroProgress(consumed.carbsG, target?.carbsG);
-  double get proteinProgress => _macroProgress(consumed.proteinG, target?.proteinG);
+  double get proteinProgress =>
+      _macroProgress(consumed.proteinG, target?.proteinG);
   double get fatProgress => _macroProgress(consumed.fatG, target?.fatG);
 
-  List<Meal> mealsByType(MealType type) => meals.where((m) => m.mealType == type).toList();
+  List<Meal> mealsByType(MealType type) =>
+      meals.where((m) => m.mealType == type).toList();
 }

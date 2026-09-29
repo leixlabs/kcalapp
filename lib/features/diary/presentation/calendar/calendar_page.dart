@@ -1,133 +1,191 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:table_calendar/table_calendar.dart';
+
 import '../../application/diary_providers.dart';
 import '../../../../core/utils/format_utils.dart';
 
-class CalendarPage extends ConsumerStatefulWidget {
-  const CalendarPage({super.key});
+class CalendarDrawer extends ConsumerWidget {
+  final DateTime selectedDate;
+  final DateTime focusedDay;
+  final ValueChanged<DateTime> onDateSelected;
+  final ValueChanged<DateTime> onFocusedDayChanged;
+
+  const CalendarDrawer({
+    super.key,
+    required this.selectedDate,
+    required this.focusedDay,
+    required this.onDateSelected,
+    required this.onFocusedDayChanged,
+  });
 
   @override
-  ConsumerState<CalendarPage> createState() => _CalendarPageState();
-}
-
-class _CalendarPageState extends ConsumerState<CalendarPage> {
-  DateTime _focusedDay = DateTime.now();
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final selectedDate = ref.watch(selectedDateProvider);
-    final monthlyKcalAsync = ref.watch(monthlyMealsProvider(_focusedDay));
+    final monthlyKcalAsync = ref.watch(monthlyMealsProvider(focusedDay));
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('日历'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-      ),
-      body: Column(
-        children: [
-          monthlyKcalAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('加载失败: $e')),
-            data: (kcalMap) => TableCalendar(
-              firstDay: DateTime(2024, 1, 1),
-              lastDay: DateTime.now().add(const Duration(days: 365)),
-              focusedDay: _focusedDay,
-              selectedDayPredicate: (day) => FormatUtils.isSameDay(day, selectedDate),
-              onDaySelected: (selected, focused) {
-                setState(() {
-                  _focusedDay = focused;
-                });
-                ref.read(selectedDateProvider.notifier).state = selected;
-                context.pop();
-              },
-              onPageChanged: (focused) {
-                setState(() {
-                  _focusedDay = focused;
-                });
-              },
-              locale: 'zh_CN',
-              calendarStyle: CalendarStyle(
-                selectedDecoration: BoxDecoration(
-                  color: theme.colorScheme.primary,
-                  shape: BoxShape.circle,
-                ),
-                todayDecoration: BoxDecoration(
-                  color: theme.colorScheme.primaryContainer,
-                  shape: BoxShape.circle,
-                ),
-                markerDecoration: BoxDecoration(
-                  color: theme.colorScheme.secondary,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              headerStyle: const HeaderStyle(
-                formatButtonVisible: false,
-                titleCentered: true,
-              ),
-              calendarBuilders: CalendarBuilders(
-                defaultBuilder: (context, day, focusedDay) {
-                  return _buildDayCell(theme, day, kcalMap);
-                },
-                selectedBuilder: (context, day, focusedDay) {
-                  return _buildDayCell(theme, day, kcalMap, isSelected: true);
-                },
-                todayBuilder: (context, day, focusedDay) {
-                  return _buildDayCell(theme, day, kcalMap, isToday: true);
-                },
-              ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+          child: monthlyKcalAsync.when(
+            loading: () => const SizedBox(
+              height: 320,
+              child: Center(child: CircularProgressIndicator()),
             ),
+            error: (error, _) => Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text('日历加载失败: $error'),
+            ),
+            data: (kcalMap) {
+              final isSelectedMonth =
+                  focusedDay.year == selectedDate.year &&
+                  focusedDay.month == selectedDate.month;
+              final selectedKcal =
+                  kcalMap[DateTime(
+                    selectedDate.year,
+                    selectedDate.month,
+                    selectedDate.day,
+                  )] ??
+                  0;
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TableCalendar(
+                    firstDay: DateTime(2024, 1, 1),
+                    lastDay: DateTime.now().add(const Duration(days: 365)),
+                    focusedDay: focusedDay,
+                    selectedDayPredicate: (day) =>
+                        FormatUtils.isSameDay(day, selectedDate),
+                    onDaySelected: (selected, focused) {
+                      onFocusedDayChanged(focused);
+                      onDateSelected(selected);
+                    },
+                    onPageChanged: onFocusedDayChanged,
+                    locale: 'zh_CN',
+                    rowHeight: 54,
+                    daysOfWeekHeight: 24,
+                    calendarStyle: CalendarStyle(
+                      cellMargin: const EdgeInsets.all(2),
+                      selectedDecoration: BoxDecoration(
+                        color: theme.colorScheme.primary,
+                        shape: BoxShape.circle,
+                      ),
+                      todayDecoration: BoxDecoration(
+                        color: theme.colorScheme.primaryContainer,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    headerStyle: const HeaderStyle(
+                      formatButtonVisible: false,
+                      titleCentered: true,
+                      titleTextStyle: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    calendarBuilders: CalendarBuilders(
+                      defaultBuilder: (context, day, _) =>
+                          _buildDayCell(theme, day, kcalMap),
+                      selectedBuilder: (context, day, _) =>
+                          _buildDayCell(theme, day, kcalMap, isSelected: true),
+                      todayBuilder: (context, day, _) =>
+                          _buildDayCell(theme, day, kcalMap, isToday: true),
+                      outsideBuilder: (context, day, _) =>
+                          _buildDayCell(theme, day, kcalMap, isOutside: true),
+                    ),
+                  ),
+                  if (isSelectedMonth)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          '所选日期总热量 ${selectedKcal.round()} kcal',
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            color: theme.colorScheme.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildDayCell(ThemeData theme, DateTime day, Map<int, double> kcalMap,
-      {bool isSelected = false, bool isToday = false}) {
-    final kcal = kcalMap[day.day];
+  Widget _buildDayCell(
+    ThemeData theme,
+    DateTime day,
+    Map<DateTime, double> kcalMap, {
+    bool isSelected = false,
+    bool isToday = false,
+    bool isOutside = false,
+  }) {
+    final date = DateTime(day.year, day.month, day.day);
+    final kcal = kcalMap[date];
     final hasKcal = kcal != null && kcal > 0;
+    final textColor = isSelected
+        ? Colors.white
+        : isOutside
+        ? theme.colorScheme.outlineVariant
+        : theme.colorScheme.onSurface;
 
-    Color? bgColor;
-    Color textColor = theme.colorScheme.onSurface;
-
-    if (isSelected) {
-      bgColor = theme.colorScheme.primary;
-      textColor = Colors.white;
-    } else if (isToday) {
-      bgColor = theme.colorScheme.primaryContainer;
-    }
-
-    return Container(
-      margin: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: bgColor,
-        shape: BoxShape.circle,
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            '${day.day}',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: textColor,
-              fontWeight: isSelected || isToday ? FontWeight.bold : FontWeight.normal,
-            ),
+    return Semantics(
+      container: true,
+      label: hasKcal ? '${day.day}日，${kcal.round()}千卡' : '${day.day}日',
+      button: true,
+      selected: isSelected,
+      child: Center(
+        child: Container(
+          width: 46,
+          height: 46,
+          decoration: BoxDecoration(
+            color: isSelected
+                ? theme.colorScheme.primary
+                : isToday
+                ? theme.colorScheme.primaryContainer
+                : null,
+            shape: BoxShape.circle,
           ),
-          if (hasKcal)
-            Text(
-              '${kcal.round()}k',
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: isSelected ? Colors.white70 : theme.colorScheme.primary,
-                fontSize: 10,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                '${day.day}',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: textColor,
+                  fontWeight: isSelected || isToday
+                      ? FontWeight.bold
+                      : FontWeight.normal,
+                ),
               ),
-            ),
-        ],
+              if (hasKcal)
+                SizedBox(
+                  width: 42,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      kcal.round().toString(),
+                      maxLines: 1,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: isSelected
+                            ? Colors.white
+                            : theme.colorScheme.primary,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }

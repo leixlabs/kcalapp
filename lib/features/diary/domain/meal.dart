@@ -8,6 +8,7 @@ class Meal {
   final MealType mealType;
   final String name;
   final String? photoPath;
+  final String? nutritionReview;
   final double servings;
   final String source;
   final List<FoodItem> foodItems;
@@ -20,6 +21,7 @@ class Meal {
     required this.mealType,
     required this.name,
     this.photoPath,
+    this.nutritionReview,
     this.servings = 1.0,
     this.source = 'manual',
     this.foodItems = const [],
@@ -47,6 +49,7 @@ class Meal {
     MealType? mealType,
     String? name,
     String? photoPath,
+    String? nutritionReview,
     double? servings,
     String? source,
     List<FoodItem>? foodItems,
@@ -59,6 +62,7 @@ class Meal {
       mealType: mealType ?? this.mealType,
       name: name ?? this.name,
       photoPath: photoPath ?? this.photoPath,
+      nutritionReview: nutritionReview ?? this.nutritionReview,
       servings: servings ?? this.servings,
       source: source ?? this.source,
       foodItems: foodItems ?? this.foodItems,
@@ -68,5 +72,6 @@ class Meal {
   }
 
   @override
-  String toString() => 'Meal($name, ${mealType.label}, ${foodItems.length} items, ${totalNutrition.kcalDisplay}kcal)';
+  String toString() =>
+      'Meal($name, ${mealType.label}, ${foodItems.length} items, ${totalNutrition.kcalDisplay}kcal)';
 }

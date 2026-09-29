@@ -1,8 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/material.dart';
 import 'package:calory/features/diary/domain/nutrition.dart';
 import 'package:calory/features/diary/domain/food_item.dart';
 import 'package:calory/features/diary/domain/meal.dart';
 import 'package:calory/features/diary/domain/meal_type.dart';
+import 'package:calory/features/diary/application/daily_summary.dart';
+import 'package:calory/core/widgets/ruler_value_picker.dart';
 
 void main() {
   group('Nutrition', () {
@@ -11,6 +14,47 @@ void main() {
       expect(Nutrition.zero.carbsG, 0);
       expect(Nutrition.zero.proteinG, 0);
       expect(Nutrition.zero.fatG, 0);
+    });
+
+    group('RulerValuePicker', () {
+      testWidgets('a single tick drag changes the value by one step', (
+        tester,
+      ) async {
+        final values = <double>[];
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: RulerValuePicker(
+                value: 16.9,
+                max: 100,
+                step: 0.1,
+                unit: 'g',
+                color: Colors.teal,
+                onChanged: values.add,
+              ),
+            ),
+          ),
+        );
+
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is RichText && widget.text.toPlainText() == '16.9 g',
+          ),
+          findsOneWidget,
+        );
+        await tester.drag(find.byType(ListView), const Offset(-12, 0));
+        await tester.pumpAndSettle();
+
+        expect(values, [17.0]);
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is RichText && widget.text.toPlainText() == '17.0 g',
+          ),
+          findsOneWidget,
+        );
+      });
     });
 
     test('addition should sum all values', () {
@@ -103,6 +147,22 @@ void main() {
       expect(meal.totalNutrition.kcal, 0);
     });
 
+    test('copyWith preserves nutritionist review', () {
+      final meal = Meal(
+        dateTime: DateTime.now(),
+        mealType: MealType.lunch,
+        name: 'Lunch',
+        nutritionReview: '均衡营养，适量食用。',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
+      expect(
+        meal.copyWith(name: 'Updated lunch').nutritionReview,
+        '均衡营养，适量食用。',
+      );
+    });
+
     test('servings should scale total nutrition', () {
       final meal = Meal(
         dateTime: DateTime.now(),
@@ -154,6 +214,40 @@ void main() {
       );
       expect(meal.totalWeightG, 230);
     });
+
+    test(
+      'daily kcal aggregation distinguishes same day number across months',
+      () {
+        final now = DateTime.now();
+        Meal mealFor(DateTime date, double kcal) => Meal(
+          dateTime: date,
+          mealType: MealType.lunch,
+          name: 'Meal',
+          foodItems: [
+            FoodItem(
+              name: 'Food',
+              weightG: 100,
+              kcal: kcal,
+              carbsG: 0,
+              proteinG: 0,
+              fatG: 0,
+            ),
+          ],
+          createdAt: now,
+          updatedAt: now,
+        );
+
+        final totals = aggregateDailyKcal([
+          mealFor(DateTime(2026, 9, 1, 8), 120),
+          mealFor(DateTime(2026, 9, 1, 12), 80),
+          mealFor(DateTime(2026, 8, 1, 8), 200),
+        ]);
+
+        expect(totals[DateTime(2026, 9, 1)], 200);
+        expect(totals[DateTime(2026, 8, 1)], 200);
+        expect(totals, hasLength(2));
+      },
+    );
   });
 
   group('MealType', () {

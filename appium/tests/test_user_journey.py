@@ -123,7 +123,6 @@ def _open_calendar_and_select_today(driver) -> None:
         timeout=12,
     )
     date_button.click()
-    helpers.wait_for(driver, helpers.by_label_contains("日历"), timeout=15)
 
     today = time.localtime()
     today_label = f"{today.tm_year}年{today.tm_mon}月{today.tm_mday}日"
@@ -201,14 +200,32 @@ def test_configure_recognize_and_review_daily_detail(driver):
         "The selected day's home view does not contain the saved meal"
     )
 
-    meal_card = helpers.wait_for_clickable(
-        driver, helpers.by_label_contains(MEAL_NAME), timeout=12
+    # Local simulator runs retain earlier journeys; entries are ordered by time,
+    # so scroll to the newest matching record before opening its details.
+    for _ in range(6):
+        helpers.scroll_down(driver, ratio=0.35)
+        time.sleep(0.2)
+    meal_cards = driver.find_elements(*helpers.by_label_contains(MEAL_NAME))
+    visible_cards = [
+        card for card in meal_cards
+        if card.rect["width"] > 0 and card.rect["height"] > 0
+    ]
+    meal_card = max(visible_cards, key=lambda card: card.rect["y"]) if visible_cards else (
+        helpers.wait_for_clickable(
+            driver, helpers.by_label_contains(MEAL_NAME), timeout=12
+        )
     )
     meal_card.click()
 
-    # 新 UI：点击餐食进入查看页（MealViewPage），不再直接进编辑页
-    # 查看页顶部显示餐食名，底部有"修改"按钮
+    # Meal details are edited inline; there is no separate edit page.
     helpers.wait_for(driver, helpers.by_label_contains(MEAL_NAME), timeout=15)
+    assert helpers.exists(driver, helpers.by_label_contains("营养师评价")), (
+        "Meal details do not show the nutritionist review near the top"
+    )
+    assert helpers.exists(
+        driver,
+        helpers.by_label_contains("营养搭配较均衡，建议适量食用"),
+    ), "Saved meal did not retain the nutritionist review from the mock response"
 
     # 检查食材在查看页中可见
     for ingredient in ("饺子", "鸡蛋", "橘子"):
@@ -224,24 +241,24 @@ def test_configure_recognize_and_review_daily_detail(driver):
         "Meal view does not show the expected total of 462 kcal"
     )
 
-    # 点击"修改"按钮进入编辑页
-    helpers.tap_text(driver, "修改", timeout=12)
-    helpers.wait_for(driver, helpers.by_label("编辑餐食"), timeout=15)
-
-    editor_fields = driver.find_elements(AppiumBy.CLASS_NAME, "XCUIElementTypeTextField")
-    values = [field.get_attribute("value") or "" for field in editor_fields]
-    assert MEAL_NAME in values, f"Editor does not show the saved meal name: {values}"
-    for ingredient in ("饺子", "鸡蛋", "橘子"):
+    for label in ("钙", "钠", "铁", "镁", "维生素A"):
         found = False
-        for _ in range(6):
-            editor_fields = driver.find_elements(AppiumBy.CLASS_NAME, "XCUIElementTypeTextField")
-            values = [field.get_attribute("value") or "" for field in editor_fields]
-            if ingredient in values:
+        for _ in range(8):
+            if helpers.exists(driver, helpers.by_label_contains(label)):
                 found = True
                 break
             helpers.scroll_down(driver, ratio=0.35)
             time.sleep(0.25)
-        assert found, f"Editor is missing ingredient {ingredient!r}: {values}"
-    assert helpers.exists(driver, helpers.by_label_contains("462 kcal")), (
-        "Editor does not show the expected total of 462 kcal"
-    )
+        assert found, f"Meal details are missing micronutrient {label!r}"
+
+    for _ in range(6):
+        helpers.scroll_up(driver, ratio=0.35)
+        time.sleep(0.2)
+    helpers.tap_text(driver, MEAL_NAME, timeout=12)
+    helpers.wait_for(driver, helpers.by_label("修改餐名"), timeout=10)
+    _fill_field(driver, 0, f"{MEAL_NAME} edited")
+    helpers.tap_text(driver, "保存", timeout=12)
+    helpers.tap_text(driver, "更新", timeout=12)
+    assert helpers.wait_for(
+        driver, helpers.by_label_contains(f"{MEAL_NAME} edited"), timeout=12
+    ), "Inline meal title edit did not appear in the detail page"

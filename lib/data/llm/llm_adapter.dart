@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:alice/alice.dart';
 import 'package:alice_dio/alice_dio_adapter.dart';
 import 'package:dio/dio.dart';
+
 import '../../features/llm_settings/domain/llm_profile.dart';
 import 'llm_schema.dart';
 
@@ -49,7 +51,7 @@ class LlmAdapter {
               {'type': 'text', 'text': prompt},
               {
                 'type': 'image_url',
-                'image_url': {'url': 'data:image/jpeg;base64,$base64Image'}
+                'image_url': {'url': 'data:image/jpeg;base64,$base64Image'},
               },
             ],
           },
@@ -85,12 +87,13 @@ class LlmAdapter {
         data: {
           'model': profile.model,
           'messages': [
-            {'role': 'user', 'content': '请回复"OK"'}
+            {'role': 'user', 'content': '请回复"OK"'},
           ],
           'max_tokens': 10,
         },
       );
-      final content = response.data['choices'][0]['message']['content'] as String;
+      final content =
+          response.data['choices'][0]['message']['content'] as String;
       return content.isNotEmpty;
     } on DioException catch (e) {
       throw _mapDioError(e);
@@ -156,7 +159,17 @@ class LlmAdapter {
                     'maxItems': 13,
                   },
                 },
-                'required': ['name', 'weight_g', 'kcal', 'carbs_g', 'protein_g', 'fat_g', 'confidence', 'minerals', 'vitamins'],
+                'required': [
+                  'name',
+                  'weight_g',
+                  'kcal',
+                  'carbs_g',
+                  'protein_g',
+                  'fat_g',
+                  'confidence',
+                  'minerals',
+                  'vitamins',
+                ],
                 'additionalProperties': false,
               },
             },
@@ -167,7 +180,7 @@ class LlmAdapter {
             },
             'notes': {
               'type': 'string',
-              'description': '补充说明，如份量估算依据',
+              'description': '营养师评价：对这餐的营养搭配和适量食用给出简短、实用的建议',
             },
           },
           'required': ['meal_name', 'items', 'overall_confidence', 'notes'],
@@ -201,11 +214,18 @@ enum MealTypeHint { breakfast, lunch, dinner, snack }
 
 extension on MealTypeHint {
   String get label => switch (this) {
-        MealTypeHint.breakfast => '早餐',
-        MealTypeHint.lunch => '午餐',
-        MealTypeHint.dinner => '晚餐',
-        MealTypeHint.snack => '加餐',
-      };
+    MealTypeHint.breakfast => '早餐',
+    MealTypeHint.lunch => '午餐',
+    MealTypeHint.dinner => '晚餐',
+    MealTypeHint.snack => '加餐',
+  };
 }
 
-enum LlmConnectionError { timeout, unauthorized, rateLimited, serverError, unknown, parseError }
+enum LlmConnectionError {
+  timeout,
+  unauthorized,
+  rateLimited,
+  serverError,
+  unknown,
+  parseError,
+}

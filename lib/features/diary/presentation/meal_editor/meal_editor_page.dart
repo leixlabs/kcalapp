@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../../app/theme.dart';
 import '../../../../app/providers.dart';
 import '../../../../core/utils/format_utils.dart';
@@ -68,7 +69,11 @@ class _MealEditorPageState extends ConsumerState<MealEditorPage> {
     if (dateStr == null) return DateTime.now();
     try {
       final parts = dateStr.split('-');
-      return DateTime(int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]));
+      return DateTime(
+        int.parse(parts[0]),
+        int.parse(parts[1]),
+        int.parse(parts[2]),
+      );
     } catch (_) {
       return DateTime.now();
     }
@@ -87,7 +92,11 @@ class _MealEditorPageState extends ConsumerState<MealEditorPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    if (_isLoading) return Scaffold(appBar: AppBar(), body: const Center(child: CircularProgressIndicator()));
+    if (_isLoading)
+      return Scaffold(
+        appBar: AppBar(),
+        body: const Center(child: CircularProgressIndicator()),
+      );
 
     final servings = double.tryParse(_servingsController.text) ?? 1.0;
     final totalNutrition = _calculateTotal(servings);
@@ -107,7 +116,12 @@ class _MealEditorPageState extends ConsumerState<MealEditorPage> {
           ],
         ),
       ),
-      bottomNavigationBar: _buildBottomBar(context, theme, servings, totalNutrition),
+      bottomNavigationBar: _buildBottomBar(
+        context,
+        theme,
+        servings,
+        totalNutrition,
+      ),
     );
   }
 
@@ -129,8 +143,14 @@ class _MealEditorPageState extends ConsumerState<MealEditorPage> {
                   child: DropdownButtonFormField<MealType>(
                     value: _mealType,
                     decoration: const InputDecoration(labelText: '餐次'),
-                    items: MealType.values.map((t) => DropdownMenuItem(value: t, child: Text(t.label))).toList(),
-                    onChanged: (v) => setState(() => _mealType = v ?? _mealType),
+                    items: MealType.values
+                        .map(
+                          (t) =>
+                              DropdownMenuItem(value: t, child: Text(t.label)),
+                        )
+                        .toList(),
+                    onChanged: (v) =>
+                        setState(() => _mealType = v ?? _mealType),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -143,12 +163,15 @@ class _MealEditorPageState extends ConsumerState<MealEditorPage> {
                   ),
                 ),
               ],
-           ),
+            ),
             const SizedBox(height: 12),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.calendar_today, size: 20),
-              title: Text(FormatUtils.formatDate(_selectedDate), style: theme.textTheme.bodyMedium),
+              title: Text(
+                FormatUtils.formatDate(_selectedDate),
+                style: theme.textTheme.bodyMedium,
+              ),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => _selectDate(context),
             ),
@@ -168,7 +191,12 @@ class _MealEditorPageState extends ConsumerState<MealEditorPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _summaryItem('热量', '${total.kcal.round()}', 'kcal', theme.colorScheme.primary),
+          _summaryItem(
+            '热量',
+            '${total.kcal.round()}',
+            'kcal',
+            theme.colorScheme.primary,
+          ),
           _summaryItem('碳水', total.carbsDisplay, 'g', AppColors.carbs),
           _summaryItem('蛋白质', total.proteinDisplay, 'g', AppColors.protein),
           _summaryItem('脂肪', total.fatDisplay, 'g', AppColors.fat),
@@ -181,10 +209,26 @@ class _MealEditorPageState extends ConsumerState<MealEditorPage> {
     final theme = Theme.of(context);
     return Column(
       children: [
-        Text(label, style: theme.textTheme.bodySmall?.copyWith(color: color, fontWeight: FontWeight.w600)),
+        Text(
+          label,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: color,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         const SizedBox(height: 4),
-        Text(value, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-        Text(unit, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline)),
+        Text(
+          value,
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        Text(
+          unit,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.outline,
+          ),
+        ),
       ],
     );
   }
@@ -196,7 +240,12 @@ class _MealEditorPageState extends ConsumerState<MealEditorPage> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('食材', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+            Text(
+              '食材',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
             TextButton.icon(
               onPressed: _addFoodItem,
               icon: const Icon(Icons.add),
@@ -217,25 +266,36 @@ class _MealEditorPageState extends ConsumerState<MealEditorPage> {
           Padding(
             padding: const EdgeInsets.all(16),
             child: Center(
-              child: Text('暂无食材，点击添加', style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.outline,
-              )),
+              child: Text(
+                '暂无食材，点击添加',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.outline,
+                ),
+              ),
             ),
           ),
       ],
     );
   }
 
-  Widget _buildBottomBar(BuildContext context, ThemeData theme, double servings, Nutrition total) {
+  Widget _buildBottomBar(
+    BuildContext context,
+    ThemeData theme,
+    double servings,
+    Nutrition total,
+  ) {
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
             if (_editors.isNotEmpty)
-              Text('合计 ${total.kcal.round()} kcal', style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              )),
+              Text(
+                '合计 ${total.kcal.round()} kcal',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             const Spacer(),
             FilledButton.icon(
               onPressed: _editors.isEmpty ? null : _saveMeal,
@@ -281,11 +341,13 @@ class _MealEditorPageState extends ConsumerState<MealEditorPage> {
   void _saveMeal() async {
     final servings = double.tryParse(_servingsController.text) ?? 1.0;
     if (servings <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('份数必须大于 0')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('份数必须大于 0')));
       return;
     }
     if (_nameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('请输入餐名')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('请输入餐名')));
       return;
     }
 
@@ -298,6 +360,7 @@ class _MealEditorPageState extends ConsumerState<MealEditorPage> {
       mealType: _mealType,
       name: _nameController.text.trim(),
       photoPath: _existingMeal?.photoPath,
+      nutritionReview: _existingMeal?.nutritionReview,
       servings: servings,
       source: _existingMeal?.source ?? 'manual',
       foodItems: foodItems,
@@ -318,7 +381,8 @@ class _MealEditorPageState extends ConsumerState<MealEditorPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('保存失败: $e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('保存失败: $e')));
       }
     }
   }
@@ -357,13 +421,16 @@ class FoodItemEditor {
     final carbs = double.tryParse(carbsController.text);
     final protein = double.tryParse(proteinController.text);
     final fat = double.tryParse(fatController.text);
-    if (kcal == null || carbs == null || protein == null || fat == null) return null;
+    if (kcal == null || carbs == null || protein == null || fat == null)
+      return null;
     return Nutrition(kcal: kcal, carbsG: carbs, proteinG: protein, fatG: fat);
   }
 
   FoodItem toFoodItem() {
     return FoodItem(
-      name: nameController.text.trim().isEmpty ? '食材' : nameController.text.trim(),
+      name: nameController.text.trim().isEmpty
+          ? '食材'
+          : nameController.text.trim(),
       weightG: double.tryParse(weightController.text) ?? 0,
       kcal: double.tryParse(kcalController.text) ?? 0,
       carbsG: double.tryParse(carbsController.text) ?? 0,
@@ -397,10 +464,16 @@ class _FoodItemCard extends StatelessWidget {
                 Expanded(
                   child: TextField(
                     controller: editor.nameController,
-                    decoration: const InputDecoration(labelText: '食材名', isDense: true),
+                    decoration: const InputDecoration(
+                      labelText: '食材名',
+                      isDense: true,
+                    ),
                   ),
                 ),
-                IconButton(icon: const Icon(Icons.delete_outline), onPressed: onRemove),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline),
+                  onPressed: onRemove,
+                ),
               ],
             ),
             const SizedBox(height: 8),

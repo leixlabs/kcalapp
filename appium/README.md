@@ -91,7 +91,7 @@ Tests are executed in class order - app data is preserved between classes via
 | 9  | TestGoalSettings        | Set kcal + carbs + protein + fat goals, navigate back to home                    |
 | 10 | TestRecognizeAndSave    | Long-press FAB -> gallery -> AI result page -> "保存记录", mock received image   |
 | 11 | TestHomeWithData        | Meal card renders on home + nutrition progress shows macro labels               |
-| 12 | TestCalendar            | Calendar renders today's date; kcal badge is visually verified                  |
+| 12 | Test12Calendar          | Home calendar drawer shows selected day's complete kcal total                    |
 | 13 | Test13MealInlineEdit     | Edit meal title from the detail page and confirm the change persists             |
 | 14 | TestDateNavigation      | Prev-day chevron changes the displayed date label; next chevron restores today   |
 

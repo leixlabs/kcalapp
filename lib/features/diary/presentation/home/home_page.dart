@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dio/dio.dart';
+
 import '../../application/diary_providers.dart';
 import '../../../../app/theme.dart';
 import '../../../../core/utils/format_utils.dart';
@@ -10,12 +11,21 @@ import 'widgets/calorie_ring.dart';
 import 'widgets/meal_section.dart';
 import '../../domain/meal_type.dart';
 import '../../../food_recognition/application/recognition_controller.dart';
+import '../calendar/calendar_page.dart';
 
-class HomePage extends ConsumerWidget {
+class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends ConsumerState<HomePage> {
+  bool _isCalendarExpanded = false;
+  DateTime _focusedDay = DateTime.now();
+
+  @override
+  Widget build(BuildContext context) {
     final summaryAsync = ref.watch(dailySummaryProvider);
     final selectedDate = ref.watch(selectedDateProvider);
 
@@ -30,22 +40,45 @@ class HomePage extends ConsumerWidget {
           data: (summary) => CustomScrollView(
             slivers: [
               // 顶部 App Bar（logo + 日期选择器 + 头像）
+              SliverToBoxAdapter(child: _buildAppBar(context, selectedDate)),
               SliverToBoxAdapter(
-                child: _buildAppBar(context, ref, selectedDate),
+                child: AnimatedSize(
+                  duration: const Duration(milliseconds: 260),
+                  curve: Curves.easeOutCubic,
+                  alignment: Alignment.topCenter,
+                  child: _isCalendarExpanded
+                      ? CalendarDrawer(
+                          selectedDate: selectedDate,
+                          focusedDay: _focusedDay,
+                          onFocusedDayChanged: (day) =>
+                              setState(() => _focusedDay = day),
+                          onDateSelected: (day) {
+                            ref.read(selectedDateProvider.notifier).state = day;
+                            setState(() {
+                              _focusedDay = day;
+                              _isCalendarExpanded = false;
+                            });
+                          },
+                        )
+                      : const SizedBox.shrink(),
+                ),
               ),
               // 本周日期横向视图
               SliverToBoxAdapter(
                 child: _WeekDatePicker(
                   selectedDate: selectedDate,
-                  onDateSelected: (d) =>
-                      ref.read(selectedDateProvider.notifier).state = d,
+                  onDateSelected: (day) {
+                    ref.read(selectedDateProvider.notifier).state = day;
+                    if (day.year != _focusedDay.year ||
+                        day.month != _focusedDay.month) {
+                      setState(() => _focusedDay = day);
+                    }
+                  },
                 ),
               ),
               const SliverToBoxAdapter(child: SizedBox(height: 12)),
               // 目标 + 半环 + 三大营养素 合并卡片
-              SliverToBoxAdapter(
-                child: _buildDailyGoalCard(context, summary),
-              ),
+              SliverToBoxAdapter(child: _buildDailyGoalCard(context, summary)),
               const SliverToBoxAdapter(child: SizedBox(height: 16)),
               // 今日饮食记录标题
               SliverToBoxAdapter(
@@ -53,9 +86,8 @@ class HomePage extends ConsumerWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Text(
                     '今日饮食记录',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
+                    style: Theme.of(context).textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w700),
                   ),
                 ),
               ),
@@ -82,7 +114,7 @@ class HomePage extends ConsumerWidget {
 
   // ─── App Bar ───────────────────────────────────────────────────────────────
 
-  Widget _buildAppBar(BuildContext context, WidgetRef ref, DateTime selectedDate) {
+  Widget _buildAppBar(BuildContext context, DateTime selectedDate) {
     final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
@@ -92,14 +124,23 @@ class HomePage extends ConsumerWidget {
           Expanded(
             child: Center(
               child: GestureDetector(
-                onTap: () => context.push('/calendar'),
+                onTap: () {
+                  setState(() {
+                    _isCalendarExpanded = !_isCalendarExpanded;
+                    if (_isCalendarExpanded) _focusedDay = selectedDate;
+                  });
+                },
                 child: Semantics(
                   label: '选择日期',
                   button: true,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.6),
+                      color: theme.colorScheme.surfaceContainerHighest
+                          .withValues(alpha: 0.6),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
@@ -112,8 +153,15 @@ class HomePage extends ConsumerWidget {
                           ),
                         ),
                         const SizedBox(width: 4),
-                        Icon(Icons.keyboard_arrow_down,
-                            size: 18, color: theme.colorScheme.onSurface),
+                        AnimatedRotation(
+                          turns: _isCalendarExpanded ? 0.5 : 0,
+                          duration: const Duration(milliseconds: 180),
+                          child: Icon(
+                            Icons.keyboard_arrow_down,
+                            size: 18,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -132,8 +180,11 @@ class HomePage extends ConsumerWidget {
               child: CircleAvatar(
                 radius: 18,
                 backgroundColor: theme.colorScheme.primaryContainer,
-                child: Icon(Icons.person_outline,
-                    size: 20, color: theme.colorScheme.onPrimaryContainer),
+                child: Icon(
+                  Icons.person_outline,
+                  size: 20,
+                  color: theme.colorScheme.onPrimaryContainer,
+                ),
               ),
             ),
           ),
@@ -162,8 +213,11 @@ class HomePage extends ConsumerWidget {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.local_fire_department,
-                          color: theme.colorScheme.error, size: 20),
+                      Icon(
+                        Icons.local_fire_department,
+                        color: theme.colorScheme.error,
+                        size: 20,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         hasGoal
@@ -186,8 +240,11 @@ class HomePage extends ConsumerWidget {
                           ),
                         ),
                         const SizedBox(width: 2),
-                        Icon(Icons.edit_outlined,
-                            size: 14, color: theme.colorScheme.outline),
+                        Icon(
+                          Icons.edit_outlined,
+                          size: 14,
+                          color: theme.colorScheme.outline,
+                        ),
                       ],
                     ),
                   ),
@@ -256,9 +313,12 @@ class HomePage extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: theme.textTheme.labelSmall
-                  ?.copyWith(color: theme.colorScheme.outline)),
+          Text(
+            label,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.outline,
+            ),
+          ),
           const SizedBox(height: 4),
           RichText(
             text: TextSpan(
@@ -267,20 +327,24 @@ class HomePage extends ConsumerWidget {
                   text: _formatG(consumed),
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: isOver ? theme.colorScheme.error : theme.colorScheme.onSurface,
+                    color: isOver
+                        ? theme.colorScheme.error
+                        : theme.colorScheme.onSurface,
                   ),
                 ),
                 if (hasTarget)
                   TextSpan(
                     text: ' / ${_formatG(target)}g',
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: theme.colorScheme.outline),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.outline,
+                    ),
                   )
                 else
                   TextSpan(
                     text: 'g',
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: theme.colorScheme.outline),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.outline,
+                    ),
                   ),
               ],
             ),
@@ -291,9 +355,10 @@ class HomePage extends ConsumerWidget {
             child: LinearProgressIndicator(
               value: hasTarget ? progress : null,
               minHeight: 5,
-              backgroundColor: color.withOpacity(0.15),
+              backgroundColor: color.withValues(alpha: 0.15),
               valueColor: AlwaysStoppedAnimation(
-                  isOver ? theme.colorScheme.error : color),
+                isOver ? theme.colorScheme.error : color,
+              ),
             ),
           ),
         ],
@@ -308,11 +373,14 @@ class HomePage extends ConsumerWidget {
 
   // ─── 餐食分区列表 ──────────────────────────────────────────────────────────
 
-  List<Widget> _buildMealSections(BuildContext context, dynamic summary, DateTime selectedDate) {
+  List<Widget> _buildMealSections(
+    BuildContext context,
+    dynamic summary,
+    DateTime selectedDate,
+  ) {
     final sections = <Widget>[];
     for (final type in MealType.values) {
-      final typeMeals =
-          summary.meals.where((m) => m.mealType == type).toList();
+      final typeMeals = summary.meals.where((m) => m.mealType == type).toList();
       if (typeMeals.isNotEmpty) {
         sections.add(
           SliverToBoxAdapter(
@@ -336,20 +404,24 @@ class HomePage extends ConsumerWidget {
             child: Center(
               child: Column(
                 children: [
-                  Icon(Icons.restaurant_menu,
-                      size: 48,
-                      color: Theme.of(context).colorScheme.outlineVariant),
+                  Icon(
+                    Icons.restaurant_menu,
+                    size: 48,
+                    color: Theme.of(context).colorScheme.outlineVariant,
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     '今日暂无饮食记录',
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: Theme.of(context).colorScheme.outline),
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     '点击右下角拍照按钮开始记录',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.outlineVariant),
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                    ),
                   ),
                 ],
               ),
@@ -404,16 +476,22 @@ class HomePage extends ConsumerWidget {
       Navigator.of(context, rootNavigator: true).pop();
     }
 
-    _showRecognizingDialog(context, onCancel: () {
-      if (!cancelToken.isCancelled) cancelToken.cancel('user_cancelled');
-      closeDialog();
-    }).then((_) => dialogClosed = true);
+    _showRecognizingDialog(
+      context,
+      onCancel: () {
+        if (!cancelToken.isCancelled) cancelToken.cancel('user_cancelled');
+        closeDialog();
+      },
+    ).then((_) => dialogClosed = true);
     await Future.delayed(const Duration(milliseconds: 50));
     if (cancelToken.isCancelled) return;
 
     try {
-      await controller.recognize(photoPath,
-          mealTypeHint: mealType, cancelToken: cancelToken);
+      await controller.recognize(
+        photoPath,
+        mealTypeHint: mealType,
+        cancelToken: cancelToken,
+      );
       closeDialog();
       if (cancelToken.isCancelled) return;
       if (context.mounted) context.push('/recognition-result');
@@ -428,8 +506,10 @@ class HomePage extends ConsumerWidget {
     }
   }
 
-  Future<void> _showRecognizingDialog(BuildContext context,
-      {required VoidCallback onCancel}) {
+  Future<void> _showRecognizingDialog(
+    BuildContext context, {
+    required VoidCallback onCancel,
+  }) {
     return showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -467,8 +547,9 @@ class HomePage extends ConsumerWidget {
         content: const Text('AI 识别需要先在设置中添加 LLM 服务并填写 API Key。'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('取消')),
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('取消'),
+          ),
           FilledButton(
             onPressed: () {
               Navigator.of(ctx).pop();
@@ -498,7 +579,8 @@ class _WeekDatePicker extends StatelessWidget {
     final theme = Theme.of(context);
     // 本周一
     final monday = selectedDate.subtract(
-        Duration(days: selectedDate.weekday - 1));
+      Duration(days: selectedDate.weekday - 1),
+    );
 
     return SizedBox(
       height: 72,
@@ -508,7 +590,8 @@ class _WeekDatePicker extends StatelessWidget {
         itemCount: 7,
         itemBuilder: (ctx, i) {
           final day = monday.add(Duration(days: i));
-          final isSelected = day.year == selectedDate.year &&
+          final isSelected =
+              day.year == selectedDate.year &&
               day.month == selectedDate.month &&
               day.day == selectedDate.day;
           final isToday = _isToday(day);
@@ -544,10 +627,11 @@ class _WeekDatePicker extends StatelessWidget {
                       color: isSelected
                           ? theme.colorScheme.onPrimary
                           : isToday
-                              ? theme.colorScheme.primary
-                              : theme.colorScheme.onSurface,
-                      fontWeight:
-                          (isSelected || isToday) ? FontWeight.bold : FontWeight.normal,
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.onSurface,
+                      fontWeight: (isSelected || isToday)
+                          ? FontWeight.bold
+                          : FontWeight.normal,
                     ),
                   ),
                 ],

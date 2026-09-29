@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/providers.dart';
 import '../../../../app/theme.dart';
 import '../../../../core/utils/format_utils.dart';
+import '../../../../core/widgets/ruler_value_picker.dart';
 import '../../domain/meal.dart';
 import '../../domain/food_item.dart';
 import '../../domain/meal_type.dart';
@@ -212,90 +213,96 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
                   // ── 营养摘要：点击数值可直接修改 ───────────────────────
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 16,
-                      horizontal: 10,
-                    ),
+                    padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
                       color: theme.colorScheme.primaryContainer.withValues(
-                        alpha: 0.35,
+                        alpha: 0.4,
                       ),
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _bigStat(
-                          context,
-                          label: '热量',
-                          value: nutrition.kcal.round().toString(),
-                          unit: 'kcal',
-                          color: theme.colorScheme.primary,
+                        InkWell(
                           onTap: () => _editNutrient(_EditableNutrient.kcal),
-                        ),
-                        _bigStat(
-                          context,
-                          label: '碳水',
-                          value: _fmtG(nutrition.carbsG),
-                          unit: 'g',
-                          color: AppColors.carbs,
-                          onTap: () => _editNutrient(_EditableNutrient.carbs),
-                        ),
-                        _bigStat(
-                          context,
-                          label: '蛋白质',
-                          value: _fmtG(nutrition.proteinG),
-                          unit: 'g',
-                          color: AppColors.protein,
-                          onTap: () => _editNutrient(_EditableNutrient.protein),
-                        ),
-                        _bigStat(
-                          context,
-                          label: '脂肪',
-                          value: _fmtG(nutrition.fatG),
-                          unit: 'g',
-                          color: AppColors.fat,
-                          onTap: () => _editNutrient(_EditableNutrient.fat),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text('份数', style: theme.textTheme.bodyMedium),
-                        IconButton(
-                          tooltip: '减少份数',
-                          onPressed: meal.servings > 0.5
-                              ? () => setState(
-                                  () => _meal = meal.copyWith(
-                                    servings: meal.servings - 0.5,
-                                  ),
-                                )
-                              : null,
-                          icon: const Icon(Icons.remove_circle_outline),
-                        ),
-                        Text(
-                          meal.servings % 1 == 0
-                              ? meal.servings.toInt().toString()
-                              : meal.servings.toString(),
-                          style: theme.textTheme.titleMedium,
-                        ),
-                        IconButton(
-                          tooltip: '增加份数',
-                          onPressed: () => setState(
-                            () => _meal = meal.copyWith(
-                              servings: meal.servings + 0.5,
-                            ),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.local_fire_department,
+                                color: theme.colorScheme.error,
+                                size: 28,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '总热量',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const Spacer(),
+                              Text(
+                                '${nutrition.kcal.round()}',
+                                style: theme.textTheme.headlineLarge?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  color: theme.colorScheme.primary,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'kcal',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  color: theme.colorScheme.outline,
+                                ),
+                              ),
+                            ],
                           ),
-                          icon: const Icon(Icons.add_circle_outline),
+                        ),
+                        const SizedBox(height: 12),
+                        Divider(
+                          height: 1,
+                          color: theme.colorScheme.outlineVariant.withValues(
+                            alpha: 0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            _bigStat(
+                              context,
+                              label: '碳水',
+                              value: _fmtG(nutrition.carbsG),
+                              unit: 'g',
+                              color: AppColors.carbs,
+                              onTap: () =>
+                                  _editNutrient(_EditableNutrient.carbs),
+                            ),
+                            _bigStat(
+                              context,
+                              label: '蛋白质',
+                              value: _fmtG(nutrition.proteinG),
+                              unit: 'g',
+                              color: AppColors.protein,
+                              onTap: () =>
+                                  _editNutrient(_EditableNutrient.protein),
+                            ),
+                            _bigStat(
+                              context,
+                              label: '脂肪',
+                              value: _fmtG(nutrition.fatG),
+                              unit: 'g',
+                              color: AppColors.fat,
+                              onTap: () => _editNutrient(_EditableNutrient.fat),
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ),
+                  const SizedBox(height: 12),
+                  _buildNutritionReview(meal, theme),
+                  const SizedBox(height: 20),
 
                   // ── 食材列表标题 ──────────────────────────────────────
                   Row(
@@ -430,6 +437,58 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildNutritionReview(Meal meal, ThemeData theme) {
+    final review = meal.nutritionReview?.trim();
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(
+          alpha: 0.45,
+        ),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.health_and_safety_outlined,
+                size: 20,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '营养师评价',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                'AI 生成',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.outline,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            review == null || review.isEmpty ? '暂无营养师评价' : review,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: review == null || review.isEmpty
+                  ? theme.colorScheme.outline
+                  : theme.colorScheme.onSurface,
+              height: 1.4,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -729,12 +788,10 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
         var value = currentValue.clamp(0.0, maxValue);
         return StatefulBuilder(
           builder: (ctx, setSheetState) => Container(
-            padding: EdgeInsets.fromLTRB(
-              24,
-              26,
-              24,
-              MediaQuery.of(ctx).viewInsets.bottom + 28,
-            ),
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 28,
+              top: 26,
+            ).add(const EdgeInsets.symmetric(horizontal: 24)),
             decoration: const BoxDecoration(
               color: Color(0xFFF5FAFA),
               borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
@@ -743,45 +800,16 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text('修改$label', style: Theme.of(ctx).textTheme.headlineSmall),
-                const SizedBox(height: 30),
-                RichText(
-                  text: TextSpan(
-                    children: [
-                      TextSpan(
-                        text: value.toStringAsFixed(1),
-                        style: TextStyle(
-                          fontSize: 48,
-                          fontWeight: FontWeight.bold,
-                          color: color,
-                        ),
-                      ),
-                      TextSpan(
-                        text: ' $unit',
-                        style: TextStyle(
-                          fontSize: 22,
-                          color: color.withValues(alpha: 0.75),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Slider(
+                const SizedBox(height: 18),
+                RulerValuePicker(
                   value: value,
-                  min: 0,
                   max: maxValue,
-                  divisions: 1000,
-                  activeColor: color,
+                  step: unit == 'kcal' ? 1 : 0.1,
+                  unit: unit,
+                  color: color,
                   onChanged: (next) => setSheetState(() => value = next),
                 ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('0'),
-                    Text('${maxValue.round()} $unit'),
-                  ],
-                ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
                   height: 54,
@@ -795,6 +823,7 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
                     child: const Text('保存'),
                   ),
                 ),
+                const SizedBox(height: 20),
               ],
             ),
           ),

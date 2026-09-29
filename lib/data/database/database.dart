@@ -16,7 +16,7 @@ class AppDatabase {
     final path = p.join(dir.path, 'calory.db');
     return openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
       onConfigure: (db) async {
@@ -45,6 +45,7 @@ class AppDatabase {
         meal_type TEXT NOT NULL,
         name TEXT NOT NULL,
         photo_path TEXT,
+        nutrition_review TEXT,
         servings REAL NOT NULL DEFAULT 1.0,
         source TEXT NOT NULL DEFAULT 'manual',
         is_deleted INTEGER NOT NULL DEFAULT 0,
@@ -94,7 +95,9 @@ class AppDatabase {
     await db.execute('CREATE INDEX idx_meals_date ON meals(date_time)');
     await db.execute('CREATE INDEX idx_meals_type ON meals(meal_type)');
     await db.execute('CREATE INDEX idx_food_items_meal ON food_items(meal_id)');
-    await db.execute('CREATE INDEX idx_daily_goals_date ON daily_goals(effective_date)');
+    await db.execute(
+      'CREATE INDEX idx_daily_goals_date ON daily_goals(effective_date)',
+    );
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -114,6 +117,9 @@ class AppDatabase {
       await db.execute('ALTER TABLE food_items ADD COLUMN minerals_json TEXT');
       await db.execute('ALTER TABLE food_items ADD COLUMN vitamins_json TEXT');
     }
+    if (oldVersion < 5) {
+      await db.execute('ALTER TABLE meals ADD COLUMN nutrition_review TEXT');
+    }
   }
 
   Future<void> close() async {
@@ -126,7 +132,10 @@ class AppDatabase {
     return db.rawInsert(sql, arguments);
   }
 
-  Future<List<Map<String, dynamic>>> rawQuery(String sql, [List<Object?>? arguments]) async {
+  Future<List<Map<String, dynamic>>> rawQuery(
+    String sql, [
+    List<Object?>? arguments,
+  ]) async {
     final db = await database;
     return db.rawQuery(sql, arguments);
   }

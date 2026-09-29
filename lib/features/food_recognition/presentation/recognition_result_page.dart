@@ -1,7 +1,9 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../diary/application/diary_providers.dart';
 import '../../diary/domain/food_item.dart';
 import '../../diary/domain/meal.dart';
@@ -11,6 +13,7 @@ import '../../../app/providers.dart';
 import '../../../app/theme.dart';
 import '../../../core/widgets/states.dart';
 import '../../../core/utils/format_utils.dart';
+import '../../../core/widgets/ruler_value_picker.dart';
 
 final recognitionDraftProvider = StateProvider<MealDraft?>((ref) => null);
 
@@ -18,7 +21,8 @@ class RecognitionResultPage extends ConsumerStatefulWidget {
   const RecognitionResultPage({super.key});
 
   @override
-  ConsumerState<RecognitionResultPage> createState() => _RecognitionResultPageState();
+  ConsumerState<RecognitionResultPage> createState() =>
+      _RecognitionResultPageState();
 }
 
 class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
@@ -33,7 +37,13 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
     super.initState();
     final draft = ref.read(recognitionDraftProvider);
     final now = DateTime.now();
-    _selectedDate = DateTime(now.year, now.month, now.day, now.hour, now.minute);
+    _selectedDate = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      now.hour,
+      now.minute,
+    );
     if (draft != null) {
       _nameController = TextEditingController(text: draft.mealName);
       _servings = draft.servings;
@@ -71,10 +81,14 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
     }
 
     final theme = Theme.of(context);
-    final totalKcal = _foodItems.fold(0.0, (sum, item) => sum + item.kcal) * _servings;
-    final totalCarbs = _foodItems.fold(0.0, (sum, item) => sum + item.carbsG) * _servings;
-    final totalProtein = _foodItems.fold(0.0, (sum, item) => sum + item.proteinG) * _servings;
-    final totalFat = _foodItems.fold(0.0, (sum, item) => sum + item.fatG) * _servings;
+    final totalKcal =
+        _foodItems.fold(0.0, (sum, item) => sum + item.kcal) * _servings;
+    final totalCarbs =
+        _foodItems.fold(0.0, (sum, item) => sum + item.carbsG) * _servings;
+    final totalProtein =
+        _foodItems.fold(0.0, (sum, item) => sum + item.proteinG) * _servings;
+    final totalFat =
+        _foodItems.fold(0.0, (sum, item) => sum + item.fatG) * _servings;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAF8),
@@ -92,7 +106,8 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // 照片
-            if (draft.photoTempPath != null && File(draft.photoTempPath!).existsSync())
+            if (draft.photoTempPath != null &&
+                File(draft.photoTempPath!).existsSync())
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: ClipRRect(
@@ -120,24 +135,38 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.zero,
                       ),
-                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.primaryContainer.withOpacity(0.5),
+                      color: theme.colorScheme.primaryContainer.withOpacity(
+                        0.5,
+                      ),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: DropdownButton<MealType>(
                       value: _mealType,
                       underline: const SizedBox(),
                       isDense: true,
-                      items: MealType.values.map((t) => DropdownMenuItem(
-                        value: t,
-                        child: Text(t.label, style: theme.textTheme.bodyMedium),
-                      )).toList(),
+                      items: MealType.values
+                          .map(
+                            (t) => DropdownMenuItem(
+                              value: t,
+                              child: Text(
+                                t.label,
+                                style: theme.textTheme.bodyMedium,
+                              ),
+                            ),
+                          )
+                          .toList(),
                       onChanged: (v) {
                         if (v != null) setState(() => _mealType = v);
                       },
@@ -155,9 +184,13 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
                 borderRadius: BorderRadius.circular(12),
                 onTap: _selectDate,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                    color: theme.colorScheme.surfaceContainerHighest
+                        .withOpacity(0.5),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
@@ -167,7 +200,9 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
                       Expanded(
                         child: Text(
                           '${FormatUtils.formatDateShort(_selectedDate)} ${FormatUtils.formatTime(_selectedDate)}',
-                          style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
                       const Icon(Icons.edit_outlined, size: 18),
@@ -183,7 +218,11 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Icon(Icons.local_fire_department, color: theme.colorScheme.primary, size: 28),
+                  Icon(
+                    Icons.local_fire_department,
+                    color: theme.colorScheme.primary,
+                    size: 28,
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     '${totalKcal.round()}',
@@ -194,7 +233,9 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
                   ),
                   Text(
                     ' kcal',
-                    style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.outline),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.outline,
+                    ),
                   ),
                   const Spacer(),
                   _buildServingsStepper(theme),
@@ -207,7 +248,10 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 12,
+                  horizontal: 8,
+                ),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.primaryContainer.withOpacity(0.3),
                   borderRadius: BorderRadius.circular(16),
@@ -216,7 +260,10 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     _buildNutritionItem(
-                      theme, '碳水', '${totalCarbs.toStringAsFixed(1)}g', AppColors.carbs,
+                      theme,
+                      '碳水',
+                      '${totalCarbs.toStringAsFixed(1)}g',
+                      AppColors.carbs,
                       onTap: () => _openNutrientSlider(
                         label: '碳水',
                         color: AppColors.carbs,
@@ -226,17 +273,24 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
                       ),
                     ),
                     _buildNutritionItem(
-                      theme, '蛋白质', '${totalProtein.toStringAsFixed(1)}g', AppColors.protein,
+                      theme,
+                      '蛋白质',
+                      '${totalProtein.toStringAsFixed(1)}g',
+                      AppColors.protein,
                       onTap: () => _openNutrientSlider(
                         label: '蛋白质',
                         color: AppColors.protein,
                         currentValue: totalProtein / _servings,
                         maxValue: 200,
-                        onSaved: (v) => _scaleNutrient(_NutrientType.protein, v),
+                        onSaved: (v) =>
+                            _scaleNutrient(_NutrientType.protein, v),
                       ),
                     ),
                     _buildNutritionItem(
-                      theme, '脂肪', '${totalFat.toStringAsFixed(1)}g', AppColors.fat,
+                      theme,
+                      '脂肪',
+                      '${totalFat.toStringAsFixed(1)}g',
+                      AppColors.fat,
                       onTap: () => _openNutrientSlider(
                         label: '脂肪',
                         color: AppColors.fat,
@@ -257,10 +311,17 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('食材 (kcal)', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+                  Text(
+                    '食材 (kcal)',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   Text(
                     '点击食材修改名字和卡路里',
-                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.outline,
+                    ),
                   ),
                 ],
               ),
@@ -296,12 +357,18 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.info_outline, size: 18, color: AppColors.aiEstimate),
+                      Icon(
+                        Icons.info_outline,
+                        size: 18,
+                        color: AppColors.aiEstimate,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           draft.notes!,
-                          style: theme.textTheme.bodySmall?.copyWith(color: AppColors.aiEstimate),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: AppColors.aiEstimate,
+                          ),
                         ),
                       ),
                     ],
@@ -338,7 +405,9 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
             alignment: Alignment.center,
             child: Text(
               _servings % 1 == 0 ? '${_servings.toInt()}' : '$_servings',
-              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           IconButton(
@@ -352,7 +421,13 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
     );
   }
 
-  Widget _buildNutritionItem(ThemeData theme, String label, String value, Color color, {VoidCallback? onTap}) {
+  Widget _buildNutritionItem(
+    ThemeData theme,
+    String label,
+    String value,
+    Color color, {
+    VoidCallback? onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -360,12 +435,30 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         child: Column(
           children: [
-            Text(label, style: theme.textTheme.bodySmall?.copyWith(color: color, fontWeight: FontWeight.w600)),
+            Text(
+              label,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
             const SizedBox(height: 4),
-            Text(value, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+            Text(
+              value,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const SizedBox(height: 2),
             // 小横线提示可点击
-            Container(width: 24, height: 2, decoration: BoxDecoration(color: color.withOpacity(0.45), borderRadius: BorderRadius.circular(1))),
+            Container(
+              width: 24,
+              height: 2,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.45),
+                borderRadius: BorderRadius.circular(1),
+              ),
+            ),
           ],
         ),
       ),
@@ -378,19 +471,27 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
     if (_foodItems.isEmpty) return;
     final origTotal = _foodItems.fold<double>(0, (s, e) {
       switch (type) {
-        case _NutrientType.carbs:   return s + e.carbsG;
-        case _NutrientType.protein: return s + e.proteinG;
-        case _NutrientType.fat:     return s + e.fatG;
+        case _NutrientType.carbs:
+          return s + e.carbsG;
+        case _NutrientType.protein:
+          return s + e.proteinG;
+        case _NutrientType.fat:
+          return s + e.fatG;
       }
     });
     setState(() {
       _foodItems = _foodItems.map((item) {
-        final itemProp = origTotal > 0 ? _getVal(item, type) / origTotal : 1.0 / _foodItems.length;
+        final itemProp = origTotal > 0
+            ? _getVal(item, type) / origTotal
+            : 1.0 / _foodItems.length;
         final newVal = newTotalPerServing * itemProp;
         switch (type) {
-          case _NutrientType.carbs:   return item.copyWith(carbsG: newVal);
-          case _NutrientType.protein: return item.copyWith(proteinG: newVal);
-          case _NutrientType.fat:     return item.copyWith(fatG: newVal);
+          case _NutrientType.carbs:
+            return item.copyWith(carbsG: newVal);
+          case _NutrientType.protein:
+            return item.copyWith(proteinG: newVal);
+          case _NutrientType.fat:
+            return item.copyWith(fatG: newVal);
         }
       }).toList();
     });
@@ -398,9 +499,12 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
 
   double _getVal(FoodItem item, _NutrientType type) {
     switch (type) {
-      case _NutrientType.carbs:   return item.carbsG;
-      case _NutrientType.protein: return item.proteinG;
-      case _NutrientType.fat:     return item.fatG;
+      case _NutrientType.carbs:
+        return item.carbsG;
+      case _NutrientType.protein:
+        return item.proteinG;
+      case _NutrientType.fat:
+        return item.fatG;
     }
   }
 
@@ -428,8 +532,6 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(ctx2).viewInsets.bottom + 24,
                 top: 24,
-                left: 24,
-                right: 24,
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -437,81 +539,45 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
                   // 标题
                   Text(
                     '修改$label',
-                    style: Theme.of(ctx2).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+                    style: Theme.of(ctx2).textTheme.titleLarge
+                        ?.copyWith(fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 24),
-                  // 当前值大字
-                  RichText(
-                    text: TextSpan(
-                      children: [
-                        TextSpan(
-                          text: draft.toStringAsFixed(1),
-                          style: TextStyle(
-                            fontSize: 48,
-                            fontWeight: FontWeight.bold,
-                            color: color,
-                          ),
-                        ),
-                        TextSpan(
-                          text: ' g',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w500,
-                            color: color.withOpacity(0.7),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  // 刻度 Slider
-                  SliderTheme(
-                    data: SliderTheme.of(ctx2).copyWith(
-                      activeTrackColor: color,
-                      inactiveTrackColor: color.withOpacity(0.15),
-                      thumbColor: color,
-                      overlayColor: color.withOpacity(0.12),
-                      trackHeight: 4,
-                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
-                      tickMarkShape: const RoundSliderTickMarkShape(tickMarkRadius: 1.5),
-                      activeTickMarkColor: color.withOpacity(0.5),
-                      inactiveTickMarkColor: color.withOpacity(0.2),
-                    ),
-                    child: Slider(
-                      value: draft,
-                      min: 0,
-                      max: maxValue,
-                      divisions: (maxValue * 10).toInt().clamp(10, 1000),
-                      onChanged: (v) => setSheetState(() => draft = v),
-                    ),
-                  ),
-                  // 刻度标注
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('0', style: Theme.of(ctx2).textTheme.labelSmall?.copyWith(color: Theme.of(ctx2).colorScheme.outline)),
-                        Text('${maxValue.toInt()}g', style: Theme.of(ctx2).textTheme.labelSmall?.copyWith(color: Theme.of(ctx2).colorScheme.outline)),
-                      ],
-                    ),
+                  RulerValuePicker(
+                    value: draft,
+                    max: maxValue,
+                    step: 0.1,
+                    unit: 'g',
+                    color: color,
+                    onChanged: (v) => setSheetState(() => draft = v),
                   ),
                   const SizedBox(height: 28),
                   // 保存按钮
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: FilledButton(
-                      onPressed: () {
-                        Navigator.of(ctx2).pop();
-                        onSaved(draft);
-                      },
-                      style: FilledButton.styleFrom(
-                        backgroundColor: Colors.black,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: FilledButton(
+                        onPressed: () {
+                          Navigator.of(ctx2).pop();
+                          onSaved(draft);
+                        },
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.black,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: const Text(
+                          '保存',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
-                      child: const Text('保存', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
                     ),
                   ),
                 ],
@@ -562,33 +628,56 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('微量营养素', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+          Text(
+            '微量营养素',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           const SizedBox(height: 8),
           if (hasMinerals) ...[
-            Text('矿物质', style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.outline)),
+            Text(
+              '矿物质',
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: theme.colorScheme.outline,
+              ),
+            ),
             const SizedBox(height: 6),
             _buildMicroRow(
               theme,
-              Mineral.values.map((m) => _MicroCell(
-                symbol: m.symbol,
-                label: m.label,
-                value: fmt(sumMineral(m)),
-                unit: m.unit,
-              )).toList(),
+              Mineral.values
+                  .map(
+                    (m) => _MicroCell(
+                      symbol: m.symbol,
+                      label: m.label,
+                      value: fmt(sumMineral(m)),
+                      unit: m.unit,
+                    ),
+                  )
+                  .toList(),
             ),
             const SizedBox(height: 12),
           ],
           if (hasVitamins) ...[
-            Text('维生素', style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.outline)),
+            Text(
+              '维生素',
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: theme.colorScheme.outline,
+              ),
+            ),
             const SizedBox(height: 6),
             _buildMicroRow(
               theme,
-              Vitamin.values.map((v) => _MicroCell(
-                symbol: v.label,
-                label: v.fullLabel.replaceFirst('维生素', ''),
-                value: fmt(sumVitamin(v)),
-                unit: v.unit,
-              )).toList(),
+              Vitamin.values
+                  .map(
+                    (v) => _MicroCell(
+                      symbol: v.label,
+                      label: v.fullLabel.replaceFirst('维生素', ''),
+                      value: fmt(sumVitamin(v)),
+                      unit: v.unit,
+                    ),
+                  )
+                  .toList(),
             ),
           ],
           const SizedBox(height: 24),
@@ -609,35 +698,41 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
       child: Wrap(
         spacing: 0,
         runSpacing: 8,
-        children: cells.map((c) => SizedBox(
-          width: (MediaQuery.of(context).size.width - 32 - 24) / 4,
-          child: Column(
-            children: [
-              Text(
-                c.symbol,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.outline,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.4,
+        children: cells
+            .map(
+              (c) => SizedBox(
+                width: (MediaQuery.of(context).size.width - 32 - 24) / 4,
+                child: Column(
+                  children: [
+                    Text(
+                      c.symbol,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.outline,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${c.value}${c.unit}',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      c.label,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.outline,
+                        fontSize: 10,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                '${c.value}${c.unit}',
-                style: theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.bold),
-                overflow: TextOverflow.ellipsis,
-              ),
-              Text(
-                c.label,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.outline,
-                  fontSize: 10,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        )).toList(),
+            )
+            .toList(),
       ),
     );
   }
@@ -660,7 +755,9 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
   void _editIngredient(int index) {
     final item = _foodItems[index];
     final nameController = TextEditingController(text: item.name);
-    final kcalController = TextEditingController(text: item.kcal.round().toString());
+    final kcalController = TextEditingController(
+      text: item.kcal.round().toString(),
+    );
 
     showDialog<void>(
       context: context,
@@ -691,7 +788,9 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
               final newKcal = double.tryParse(kcalController.text) ?? item.kcal;
               setState(() {
                 _foodItems[index] = item.copyWith(
-                  name: nameController.text.trim().isEmpty ? item.name : nameController.text.trim(),
+                  name: nameController.text.trim().isEmpty
+                      ? item.name
+                      : nameController.text.trim(),
                   kcal: newKcal,
                 );
               });
@@ -716,9 +815,14 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
             style: FilledButton.styleFrom(
               backgroundColor: Colors.black,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
-            child: const Text('保存记录', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            child: const Text(
+              '保存记录',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
           ),
         ),
       ),
@@ -729,7 +833,11 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
     final now = DateTime.now();
     final pickedDate = await showDatePicker(
       context: context,
-      initialDate: DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day),
+      initialDate: DateTime(
+        _selectedDate.year,
+        _selectedDate.month,
+        _selectedDate.day,
+      ),
       firstDate: DateTime(2024, 1, 1),
       lastDate: now.add(const Duration(days: 365)),
     );
@@ -737,7 +845,10 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
     if (!mounted) return;
     final pickedTime = await showTimePicker(
       context: context,
-      initialTime: TimeOfDay(hour: _selectedDate.hour, minute: _selectedDate.minute),
+      initialTime: TimeOfDay(
+        hour: _selectedDate.hour,
+        minute: _selectedDate.minute,
+      ),
     );
     if (pickedTime == null) return;
     if (mounted) {
@@ -756,11 +867,13 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
   void _saveMeal() async {
     final totalKcal = _foodItems.fold(0.0, (sum, item) => sum + item.kcal);
     if (totalKcal <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('kcal must be > 0')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('kcal must be > 0')));
       return;
     }
     if (_nameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('meal name required')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('meal name required')));
       return;
     }
 
@@ -770,6 +883,7 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
       mealType: _mealType,
       name: _nameController.text.trim(),
       photoPath: ref.read(recognitionDraftProvider)?.photoTempPath,
+      nutritionReview: ref.read(recognitionDraftProvider)?.notes,
       servings: _servings,
       source: 'ai',
       foodItems: _foodItems,
@@ -785,7 +899,8 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
       if (mounted) context.go('/');
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('保存失败: $e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('保存失败: $e')));
       }
     }
   }

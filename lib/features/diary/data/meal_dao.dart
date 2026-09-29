@@ -82,12 +82,13 @@ class MealDao {
     return database.transaction((tx) async {
       final now = DateTime.now().toIso8601String();
       final mealId = await tx.rawInsert(
-        'INSERT INTO meals (date_time, meal_type, name, photo_path, servings, source, is_deleted, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)',
+        'INSERT INTO meals (date_time, meal_type, name, photo_path, nutrition_review, servings, source, is_deleted, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?)',
         [
           meal.dateTime.toIso8601String(),
           meal.mealType.name,
           meal.name,
           meal.photoPath,
+          meal.nutritionReview,
           meal.servings,
           meal.source,
           now,
@@ -123,12 +124,13 @@ class MealDao {
     final database = await db.database;
     await database.transaction((tx) async {
       await tx.rawUpdate(
-        'UPDATE meals SET date_time = ?, meal_type = ?, name = ?, photo_path = ?, servings = ?, updated_at = ? WHERE id = ?',
+        'UPDATE meals SET date_time = ?, meal_type = ?, name = ?, photo_path = ?, nutrition_review = ?, servings = ?, updated_at = ? WHERE id = ?',
         [
           meal.dateTime.toIso8601String(),
           meal.mealType.name,
           meal.name,
           meal.photoPath,
+          meal.nutritionReview,
           meal.servings,
           DateTime.now().toIso8601String(),
           meal.id,
@@ -182,28 +184,33 @@ class MealDao {
       mealType: MealType.fromString(row['meal_type'] as String?),
       name: row['name'] as String? ?? '',
       photoPath: row['photo_path'] as String?,
+      nutritionReview: row['nutrition_review'] as String?,
       servings: (row['servings'] as num?)?.toDouble() ?? 1.0,
       source: row['source'] as String? ?? 'manual',
-      foodItems: items.map((i) => FoodItem(
-        id: i['id'] as int?,
-        mealId: i['meal_id'] as int?,
-        name: i['name'] as String? ?? '',
-        weightG: (i['weight_g'] as num?)?.toDouble() ?? 0,
-        kcal: (i['kcal'] as num?)?.toDouble() ?? 0,
-        carbsG: (i['carbs_g'] as num?)?.toDouble() ?? 0,
-        proteinG: (i['protein_g'] as num?)?.toDouble() ?? 0,
-        fatG: (i['fat_g'] as num?)?.toDouble() ?? 0,
-        confidence: FoodItem.parseConfidence(i['confidence'] as String?),
-        sortOrder: i['sort_order'] as int? ?? 0,
-        minerals: MicronutrientList.fromJson(
-          i['minerals_json'] as String?,
-          length: Mineral.values.length,
-        ),
-        vitamins: MicronutrientList.fromJson(
-          i['vitamins_json'] as String?,
-          length: Vitamin.values.length,
-        ),
-      )).toList(),
+      foodItems: items
+          .map(
+            (i) => FoodItem(
+              id: i['id'] as int?,
+              mealId: i['meal_id'] as int?,
+              name: i['name'] as String? ?? '',
+              weightG: (i['weight_g'] as num?)?.toDouble() ?? 0,
+              kcal: (i['kcal'] as num?)?.toDouble() ?? 0,
+              carbsG: (i['carbs_g'] as num?)?.toDouble() ?? 0,
+              proteinG: (i['protein_g'] as num?)?.toDouble() ?? 0,
+              fatG: (i['fat_g'] as num?)?.toDouble() ?? 0,
+              confidence: FoodItem.parseConfidence(i['confidence'] as String?),
+              sortOrder: i['sort_order'] as int? ?? 0,
+              minerals: MicronutrientList.fromJson(
+                i['minerals_json'] as String?,
+                length: Mineral.values.length,
+              ),
+              vitamins: MicronutrientList.fromJson(
+                i['vitamins_json'] as String?,
+                length: Vitamin.values.length,
+              ),
+            ),
+          )
+          .toList(),
       createdAt: DateTime.parse(row['created_at'] as String),
       updatedAt: DateTime.parse(row['updated_at'] as String),
     );

@@ -626,33 +626,21 @@ class Test11HomeWithData:
 # 12. Calendar kcal badge
 # ---------------------------------------------------------------------------
 class Test12Calendar:
-    def test_calendar_shows_kcal(self, driver):
+    def test_calendar_drawer_shows_complete_selected_day_kcal(self, driver):
         _reset_to_home(driver)
-        date_btn = helpers.wait_for_any(
-            driver,
-            [helpers.by_label_contains("今天"), helpers.by_label_contains("昨日")],
-            timeout=12,
+        date_btn = helpers.wait_for(
+            driver, helpers.by_label_contains("选择日期"), timeout=12
         )
         date_btn.click()
-        helpers.wait_for(driver, helpers.by_label_contains("日历"), timeout=15)
-
-        today = time.localtime()
-        today_label_part = f"{today.tm_year}年{today.tm_mon}月{today.tm_mday}日"
-
-        deadline = time.time() + 15
-        found_today, found_kcal = False, False
-        while time.time() < deadline:
-            cells = driver.find_elements(AppiumBy.CLASS_NAME, "XCUIElementTypeStaticText")
-            labels = [c.get_attribute("label") or "" for c in cells]
-            found_today = any(today_label_part in label for label in labels)
-            if found_today:
-                break
-            time.sleep(0.35)
-
-        assert found_today, f"Calendar did not render today's date ({today_label_part})"
-        # TableCalendar exposes the full date to accessibility, but not the custom
-        # kcal text. The badge itself is rendered in the cell and covered visually.
-        driver.back()
+        selected_kcal = helpers.wait_for(
+            driver, helpers.by_label_contains("所选日期总热量"), timeout=15
+        )
+        selected_day_label = selected_kcal.get_attribute("label") or ""
+        kcal_value = selected_day_label.split("总热量", 1)[-1]
+        kcal_value = kcal_value.replace("kcal", "").strip()
+        assert kcal_value.isdigit(), (
+            f"Selected-day kcal is incomplete: {selected_day_label}"
+        )
 
 
 # ---------------------------------------------------------------------------

@@ -30,7 +30,7 @@ FIXED_RESULT = {
          "vitamins": [8, 0.06, 0.03, 0.2, 0.2, 0.06, 0, 16, 0, 32, 0, 0.2, 0]},
     ],
     "overall_confidence": "high",
-    "notes": "来自 mock 服务器的测试数据",
+    "notes": "营养搭配较均衡，建议适量食用，并搭配新鲜蔬菜。",
 }
 
 
