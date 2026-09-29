@@ -23,13 +23,14 @@ class LlmProfileDao {
         await tx.rawUpdate('UPDATE llm_profiles SET is_active = 0 WHERE is_active = 1');
       }
       return tx.rawInsert(
-        'INSERT INTO llm_profiles (display_name, base_url, model, timeout_seconds, is_active) VALUES (?, ?, ?, ?, ?)',
+        'INSERT INTO llm_profiles (display_name, base_url, model, timeout_seconds, is_active, use_json_mode) VALUES (?, ?, ?, ?, ?, ?)',
         [
           profile.displayName,
           profile.baseUrl,
           profile.model,
           profile.timeoutSeconds,
           profile.isActive ? 1 : 0,
+          profile.useJsonMode ? 1 : 0,
         ],
       );
     });
@@ -37,12 +38,13 @@ class LlmProfileDao {
 
   Future<void> updateProfile(LlmProfile profile) async {
     await db.rawUpdate(
-      'UPDATE llm_profiles SET display_name = ?, base_url = ?, model = ?, timeout_seconds = ? WHERE id = ?',
+      'UPDATE llm_profiles SET display_name = ?, base_url = ?, model = ?, timeout_seconds = ?, use_json_mode = ? WHERE id = ?',
       [
         profile.displayName,
         profile.baseUrl,
         profile.model,
         profile.timeoutSeconds,
+        profile.useJsonMode ? 1 : 0,
         profile.id,
       ],
     );
@@ -87,6 +89,7 @@ class LlmProfileDao {
       model: row['model'] as String? ?? '',
       timeoutSeconds: row['timeout_seconds'] as int? ?? 30,
       isActive: (row['is_active'] as int?) == 1,
+      useJsonMode: (row['use_json_mode'] as int? ?? 1) == 1,
       createdAt: DateTime.parse(row['created_at'] as String),
     );
   }

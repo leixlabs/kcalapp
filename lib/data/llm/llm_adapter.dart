@@ -55,6 +55,10 @@ class LlmAdapter {
           },
         ],
         'max_tokens': 2000,
+        // 若服务支持结构化输出，通过 JSON Schema 约束模型输出，
+        // 比 json_object 模式更严格：字段名、类型、枚举值均由 schema 保证，
+        // 不再依赖 prompt 描述格式。不支持该参数的服务请在设置中关闭 JSON Mode。
+        if (profile.useJsonMode) 'response_format': _buildResponseFormat(),
       },
       cancelToken: cancelToken,
     );
@@ -95,31 +99,64 @@ class LlmAdapter {
 
   String _buildPrompt(String language, MealTypeHint? hint) {
     final mealHint = hint != null ? '\n餐次提示: ${hint.label}' : '';
-    return '''请分析这张餐食图片，识别其中的食物。
-$mealHint
-请返回 JSON 格式（不要包含 markdown 标记），结构如下：
-{
-  "meal_name": "餐名",
-  "items": [
-    {
-      "name": "食材名",
-      "weight_g": 估算重量克数,
-      "kcal": 估算热量,
-      "carbs_g": 碳水克数,
-      "protein_g": 蛋白质克数,
-      "fat_g": 脂肪克数,
-      "confidence": "low|medium|high"
-    }
-  ],
-  "overall_confidence": "low|medium|high",
-  "notes": "补充说明，如份量估算依据"
-}
+    return '''请分析这张餐食图片，识别其中的食物。$mealHint
 
 要求：
-- 只识别图片中可见的食物
-- 不要编造图片中不存在的内容
-- 重量、热量和营养素为估算值
-- confidence 表示你对识别和估算的置信度''';
+- 只识别图片中可见的食物，不要编造图片中不存在的内容
+- weight_g、kcal、carbs_g、protein_g、fat_g 均为估算值，必须为非负数
+- confidence 表示你对该食材识别和营养估算的置信度''';
+  }
+
+  /// 构造 OpenAI Structured Outputs 所需的 response_format 对象。
+  /// 使用 json_schema 类型而非 json_object，让模型严格按 schema 输出，
+  /// 字段名、类型与枚举值均由 schema 约束，无需在 prompt 中重复描述格式。
+  static Map<String, dynamic> _buildResponseFormat() {
+    return {
+      'type': 'json_schema',
+      'json_schema': {
+        'name': 'food_recognition',
+        'strict': true,
+        'schema': {
+          'type': 'object',
+          'properties': {
+            'meal_name': {'type': 'string', 'description': '餐食名称'},
+            'items': {
+              'type': 'array',
+              'description': '图片中识别到的食材列表',
+              'items': {
+                'type': 'object',
+                'properties': {
+                  'name': {'type': 'string', 'description': '食材名称'},
+                  'weight_g': {'type': 'number', 'description': '估算重量（克）'},
+                  'kcal': {'type': 'number', 'description': '估算热量（千卡）'},
+                  'carbs_g': {'type': 'number', 'description': '碳水化合物（克）'},
+                  'protein_g': {'type': 'number', 'description': '蛋白质（克）'},
+                  'fat_g': {'type': 'number', 'description': '脂肪（克）'},
+                  'confidence': {
+                    'type': 'string',
+                    'enum': ['low', 'medium', 'high'],
+                    'description': '对该食材识别和营养估算的置信度',
+                  },
+                },
+                'required': ['name', 'weight_g', 'kcal', 'carbs_g', 'protein_g', 'fat_g', 'confidence'],
+                'additionalProperties': false,
+              },
+            },
+            'overall_confidence': {
+              'type': 'string',
+              'enum': ['low', 'medium', 'high'],
+              'description': '对整餐识别结果的整体置信度',
+            },
+            'notes': {
+              'type': 'string',
+              'description': '补充说明，如份量估算依据',
+            },
+          },
+          'required': ['meal_name', 'items', 'overall_confidence', 'notes'],
+          'additionalProperties': false,
+        },
+      },
+    };
   }
 
   LlmConnectionError _mapDioError(DioException e) {

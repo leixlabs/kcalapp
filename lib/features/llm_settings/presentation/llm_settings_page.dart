@@ -133,9 +133,10 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
         modelCtrl: modelCtrl,
         keyCtrl: keyCtrl,
         timeoutCtrl: timeoutCtrl,
+        initialUseJsonMode: profile?.useJsonMode ?? true,
         isEditing: isEditing,
         existing: profile,
-        onSave: () => _saveProfile(context, profile, nameCtrl, urlCtrl, modelCtrl, keyCtrl, timeoutCtrl),
+        onSave: (useJsonMode) => _saveProfile(context, profile, nameCtrl, urlCtrl, modelCtrl, keyCtrl, timeoutCtrl, useJsonMode),
       ),
     );
   }
@@ -148,6 +149,7 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
     TextEditingController model,
     TextEditingController key,
     TextEditingController timeout,
+    bool useJsonMode,
   ) async {
     if (name.text.trim().isEmpty || url.text.trim().isEmpty || model.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('请填写所有必填字段')));
@@ -167,6 +169,7 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
         timeoutSeconds: timeoutVal,
         isActive: existing.isActive,
         createdAt: existing.createdAt,
+        useJsonMode: useJsonMode,
       ));
       if (key.text.isNotEmpty) {
         await secureStore.write('${existing.id}', key.text);
@@ -179,6 +182,7 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
         timeoutSeconds: timeoutVal,
         isActive: true,
         createdAt: DateTime.now(),
+        useJsonMode: useJsonMode,
       ));
       if (key.text.isNotEmpty) {
         await secureStore.write('$id', key.text);
@@ -228,9 +232,10 @@ class _ProfileForm extends StatefulWidget {
   final TextEditingController modelCtrl;
   final TextEditingController keyCtrl;
   final TextEditingController timeoutCtrl;
+  final bool initialUseJsonMode;
   final bool isEditing;
   final LlmProfile? existing;
-  final Future<void> Function() onSave;
+  final Future<void> Function(bool useJsonMode) onSave;
 
   const _ProfileForm({
     required this.ref,
@@ -239,6 +244,7 @@ class _ProfileForm extends StatefulWidget {
     required this.modelCtrl,
     required this.keyCtrl,
     required this.timeoutCtrl,
+    required this.initialUseJsonMode,
     required this.isEditing,
     required this.existing,
     required this.onSave,
@@ -252,6 +258,13 @@ class _ProfileFormState extends State<_ProfileForm> {
   bool _validating = false;
   String? _validationMessage;
   bool _validationSuccess = false;
+  late bool _useJsonMode;
+
+  @override
+  void initState() {
+    super.initState();
+    _useJsonMode = widget.initialUseJsonMode;
+  }
 
   Future<void> _handleValidate() async {
     if (_validating) return;
@@ -291,6 +304,7 @@ class _ProfileFormState extends State<_ProfileForm> {
         timeoutSeconds: timeoutVal,
         isActive: profile?.isActive ?? false,
         createdAt: profile?.createdAt ?? DateTime.now(),
+        useJsonMode: _useJsonMode,
       );
 
       try {
@@ -379,7 +393,16 @@ class _ProfileFormState extends State<_ProfileForm> {
             decoration: const InputDecoration(labelText: '超时（秒）'),
             keyboardType: TextInputType.number,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 4),
+          SwitchListTile(
+            value: _useJsonMode,
+            onChanged: _validating ? null : (v) => setState(() => _useJsonMode = v),
+            title: const Text('JSON Mode'),
+            subtitle: const Text('强制模型返回合法 JSON（response_format），不支持时请关闭'),
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+          ),
+          const SizedBox(height: 12),
           if (_validationMessage != null) ...[
             Container(
               width: double.infinity,
@@ -435,7 +458,7 @@ class _ProfileFormState extends State<_ProfileForm> {
                   ),
                   const SizedBox(width: 8),
                   FilledButton(
-                    onPressed: _validating ? null : () => widget.onSave(),
+                    onPressed: _validating ? null : () => widget.onSave(_useJsonMode),
                     child: Text(widget.isEditing ? '更新' : '保存'),
                   ),
                 ],
