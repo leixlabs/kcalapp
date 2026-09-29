@@ -63,14 +63,14 @@ Tests are executed in class order - app data is preserved between classes via
 | 3  | TestConfigureFirstLlm   | Add mock profile, validate connectivity, save, confirm list includes it         |
 | 4  | TestLlmFormValidation   | Required-field + missing-API-key validation errors surfaced correctly           |
 | 5  | TestHttpDebugPanel      | Alice HTTP inspector opens without crashing the app                              |
-| 6  | TestSecondLlmProfile    | Add second profile + tap radio icon to activate/deactivate                       |
+| 6  | TestSecondLlmProfile    | Add second profile + switch the active profile using the primary row selector    |
 | 7  | TestEditLlmProfile      | Rename + change timeout of a profile, changes persist after save                 |
 | 8  | TestDeleteLlmProfile    | Delete via confirmation AlertDialog, row disappears, primary profile stays      |
 | 9  | TestGoalSettings        | Set kcal + carbs + protein + fat goals, navigate back to home                    |
 | 10 | TestRecognizeAndSave    | Long-press FAB -> gallery -> AI result page -> "保存记录", mock received image   |
 | 11 | TestHomeWithData        | Meal card renders on home + nutrition progress shows macro labels               |
-| 12 | TestCalendar            | Calendar page attaches kcal badge to today's cell                                |
-| 13 | TestMealEditor          | Tap meal card, edit meal name/servings, save without crashing                    |
+| 12 | TestCalendar            | Calendar renders today's date; kcal badge is visually verified                  |
+| 13 | TestMealEditor          | Edit meal name, save, and confirm the change persists                            |
 | 14 | TestDateNavigation      | Prev-day chevron changes the displayed date label; next chevron restores today   |
 
 ## Layout
@@ -93,7 +93,9 @@ appium/
   descendant StaticText rather than the button itself - use `appium inspector`
   to view the actual accessibility tree.
 - **Empty photo library on simulator**: run
-  `xcrun simctl addmedia booted appium/assets/test_meal.png`
+  `xcrun simctl addmedia booted appium/assets/test_meal.png`. On iOS 26,
+  PHPicker exposes photo thumbnails as `XCUIElementTypeImage` rather than
+  `XCUIElementTypeCell`; the test supports both accessibility layouts.
 - **Real device cannot reach mock server**: ensure phone + Mac share the same
   Wi-Fi, set `MOCK_BASE_URL` to the Mac's LAN IP, and allow port 8611 through
   the Mac firewall.
