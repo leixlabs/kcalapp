@@ -656,21 +656,20 @@ class Test12Calendar:
 
 
 # ---------------------------------------------------------------------------
-# 13. Meal editor (tap card -> edit -> save)
+# 13. Meal detail inline editing (tap card -> edit title -> update)
 # ---------------------------------------------------------------------------
-class Test13MealEditor:
-    def test_open_editor_and_save(self, driver):
+class Test13MealInlineEdit:
+    def test_edit_meal_title_from_detail(self, driver):
         _reset_to_home(driver)
         assert helpers.scroll_to_text(driver, "测试早餐组合", max_swipes=6)
         tile = helpers.wait_for(driver, helpers.by_label_contains("测试早餐组合"), timeout=12)
         tile.click()
-        helpers.wait_for_any(
-            driver,
-            [helpers.by_label("编辑餐食"), helpers.by_label("添加餐食")],
-            timeout=15,
-        )
+        helpers.wait_for(driver, helpers.by_label("食材 (kcal)"), timeout=15)
+        helpers.tap_text(driver, "测试早餐组合", timeout=12)
+        helpers.wait_for(driver, helpers.by_label("修改餐名"), timeout=10)
         _fill_textfield_by_label(driver, "餐名", "测试早餐组合 edited")
-        helpers.tap_text(driver, "更新记录", timeout=12)
+        helpers.tap_text(driver, "保存", timeout=12)
+        helpers.tap_text(driver, "更新", timeout=12)
         assert helpers.scroll_to_text(driver, "测试早餐组合 edited", max_swipes=6)
         assert helpers.exists(driver, helpers.by_label_contains("测试早餐组合 edited"))
         _reset_to_home(driver)

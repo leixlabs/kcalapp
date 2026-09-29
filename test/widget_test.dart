@@ -33,15 +33,26 @@ void main() {
     });
 
     test('tryParse should reject negative values', () {
-      expect(Nutrition.tryParse(kcal: -1, carbsG: 0, proteinG: 0, fatG: 0), isNull);
+      expect(
+        Nutrition.tryParse(kcal: -1, carbsG: 0, proteinG: 0, fatG: 0),
+        isNull,
+      );
     });
 
     test('tryParse should reject NaN', () {
-      expect(Nutrition.tryParse(kcal: double.nan, carbsG: 0, proteinG: 0, fatG: 0), isNull);
+      expect(
+        Nutrition.tryParse(kcal: double.nan, carbsG: 0, proteinG: 0, fatG: 0),
+        isNull,
+      );
     });
 
     test('display formatting should round kcal and format grams', () {
-      final n = Nutrition(kcal: 462.7, carbsG: 43.0, proteinG: 17.2, fatG: 20.25);
+      final n = Nutrition(
+        kcal: 462.7,
+        carbsG: 43.0,
+        proteinG: 17.2,
+        fatG: 20.25,
+      );
       expect(n.kcalDisplay, '463');
       expect(n.carbsDisplay, '43');
       expect(n.proteinDisplay, '17.2');
@@ -55,8 +66,22 @@ void main() {
         mealType: MealType.breakfast,
         name: 'Test meal',
         foodItems: [
-          FoodItem(name: 'Rice', weightG: 200, kcal: 260, carbsG: 56, proteinG: 5, fatG: 1),
-          FoodItem(name: 'Egg', weightG: 50, kcal: 78, carbsG: 0.6, proteinG: 6.3, fatG: 5.3),
+          FoodItem(
+            name: 'Rice',
+            weightG: 200,
+            kcal: 260,
+            carbsG: 56,
+            proteinG: 5,
+            fatG: 1,
+          ),
+          FoodItem(
+            name: 'Egg',
+            weightG: 50,
+            kcal: 78,
+            carbsG: 0.6,
+            proteinG: 6.3,
+            fatG: 5.3,
+          ),
         ],
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
@@ -85,7 +110,14 @@ void main() {
         name: 'Dinner',
         servings: 2,
         foodItems: [
-          FoodItem(name: 'Chicken', weightG: 100, kcal: 165, carbsG: 0, proteinG: 31, fatG: 3.6),
+          FoodItem(
+            name: 'Chicken',
+            weightG: 100,
+            kcal: 165,
+            carbsG: 0,
+            proteinG: 31,
+            fatG: 3.6,
+          ),
         ],
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
@@ -100,8 +132,22 @@ void main() {
         mealType: MealType.snack,
         name: 'Snack',
         foodItems: [
-          FoodItem(name: 'Cookie', weightG: 30, kcal: 150, carbsG: 20, proteinG: 2, fatG: 7),
-          FoodItem(name: 'Milk', weightG: 200, kcal: 120, carbsG: 12, proteinG: 8, fatG: 5),
+          FoodItem(
+            name: 'Cookie',
+            weightG: 30,
+            kcal: 150,
+            carbsG: 20,
+            proteinG: 2,
+            fatG: 7,
+          ),
+          FoodItem(
+            name: 'Milk',
+            weightG: 200,
+            kcal: 120,
+            carbsG: 12,
+            proteinG: 8,
+            fatG: 5,
+          ),
         ],
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
@@ -129,6 +175,28 @@ void main() {
       expect(MealType.lunch.label, '午餐');
       expect(MealType.dinner.label, '晚餐');
       expect(MealType.snack.label, '加餐');
+    });
+  });
+
+  group('Micronutrients', () {
+    test('mineral enum includes calcium, sodium, and magnesium', () {
+      expect(Mineral.calcium.label, '钙');
+      expect(Mineral.sodium.label, '钠');
+      expect(Mineral.magnesium.label, '镁');
+      expect(Mineral.calcium.unit, 'mg');
+      expect(Mineral.sodium.unit, 'mg');
+      expect(Mineral.magnesium.unit, 'mg');
+    });
+
+    test('legacy eight-mineral data remains readable', () {
+      final values = MicronutrientList.fromJson(
+        '[1,2,3,4,5,6,7,8]',
+        length: Mineral.values.length,
+      );
+
+      expect(values, hasLength(Mineral.values.length));
+      expect(values!.take(8).toList(), [1, 2, 3, 4, 5, 6, 7, 8]);
+      expect(values.skip(8).toList(), [null, null, null]);
     });
   });
 }

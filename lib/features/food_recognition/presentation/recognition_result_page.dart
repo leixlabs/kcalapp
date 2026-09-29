@@ -203,11 +203,11 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
             ),
             const SizedBox(height: 16),
 
-            // 三大营养素
+            // 三大营养素（点击可修改）
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.primaryContainer.withOpacity(0.3),
                   borderRadius: BorderRadius.circular(16),
@@ -215,9 +215,36 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _buildNutritionItem(theme, '碳水', '${totalCarbs.toStringAsFixed(1)}g', AppColors.carbs),
-                    _buildNutritionItem(theme, '蛋白质', '${totalProtein.toStringAsFixed(1)}g', AppColors.protein),
-                    _buildNutritionItem(theme, '脂肪', '${totalFat.toStringAsFixed(1)}g', AppColors.fat),
+                    _buildNutritionItem(
+                      theme, '碳水', '${totalCarbs.toStringAsFixed(1)}g', AppColors.carbs,
+                      onTap: () => _openNutrientSlider(
+                        label: '碳水',
+                        color: AppColors.carbs,
+                        currentValue: totalCarbs / _servings,
+                        maxValue: 300,
+                        onSaved: (v) => _scaleNutrient(_NutrientType.carbs, v),
+                      ),
+                    ),
+                    _buildNutritionItem(
+                      theme, '蛋白质', '${totalProtein.toStringAsFixed(1)}g', AppColors.protein,
+                      onTap: () => _openNutrientSlider(
+                        label: '蛋白质',
+                        color: AppColors.protein,
+                        currentValue: totalProtein / _servings,
+                        maxValue: 200,
+                        onSaved: (v) => _scaleNutrient(_NutrientType.protein, v),
+                      ),
+                    ),
+                    _buildNutritionItem(
+                      theme, '脂肪', '${totalFat.toStringAsFixed(1)}g', AppColors.fat,
+                      onTap: () => _openNutrientSlider(
+                        label: '脂肪',
+                        color: AppColors.fat,
+                        currentValue: totalFat / _servings,
+                        maxValue: 150,
+                        onSaved: (v) => _scaleNutrient(_NutrientType.fat, v),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -325,13 +352,174 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
     );
   }
 
-  Widget _buildNutritionItem(ThemeData theme, String label, String value, Color color) {
-    return Column(
-      children: [
-        Text(label, style: theme.textTheme.bodySmall?.copyWith(color: color, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 4),
-        Text(value, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-      ],
+  Widget _buildNutritionItem(ThemeData theme, String label, String value, Color color, {VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Column(
+          children: [
+            Text(label, style: theme.textTheme.bodySmall?.copyWith(color: color, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 4),
+            Text(value, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 2),
+            // 小横线提示可点击
+            Container(width: 24, height: 2, decoration: BoxDecoration(color: color.withOpacity(0.45), borderRadius: BorderRadius.circular(1))),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 按比例把整批 foodItems 中指定营养素缩放到新的总量。
+  /// 策略：按各食材原始占比分摊新总量（保持相对比例），若原始总量为 0 则均分。
+  void _scaleNutrient(_NutrientType type, double newTotalPerServing) {
+    if (_foodItems.isEmpty) return;
+    final origTotal = _foodItems.fold<double>(0, (s, e) {
+      switch (type) {
+        case _NutrientType.carbs:   return s + e.carbsG;
+        case _NutrientType.protein: return s + e.proteinG;
+        case _NutrientType.fat:     return s + e.fatG;
+      }
+    });
+    setState(() {
+      _foodItems = _foodItems.map((item) {
+        final itemProp = origTotal > 0 ? _getVal(item, type) / origTotal : 1.0 / _foodItems.length;
+        final newVal = newTotalPerServing * itemProp;
+        switch (type) {
+          case _NutrientType.carbs:   return item.copyWith(carbsG: newVal);
+          case _NutrientType.protein: return item.copyWith(proteinG: newVal);
+          case _NutrientType.fat:     return item.copyWith(fatG: newVal);
+        }
+      }).toList();
+    });
+  }
+
+  double _getVal(FoodItem item, _NutrientType type) {
+    switch (type) {
+      case _NutrientType.carbs:   return item.carbsG;
+      case _NutrientType.protein: return item.proteinG;
+      case _NutrientType.fat:     return item.fatG;
+    }
+  }
+
+  /// 弹出底部 slider sheet（StatefulBuilder 版）。
+  Future<void> _openNutrientSlider({
+    required String label,
+    required Color color,
+    required double currentValue,
+    required double maxValue,
+    required ValueChanged<double> onSaved,
+  }) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        double draft = currentValue.clamp(0.0, maxValue);
+        return StatefulBuilder(
+          builder: (ctx2, setSheetState) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Color(0xFFF5FAFA),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(ctx2).viewInsets.bottom + 24,
+                top: 24,
+                left: 24,
+                right: 24,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 标题
+                  Text(
+                    '修改$label',
+                    style: Theme.of(ctx2).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 24),
+                  // 当前值大字
+                  RichText(
+                    text: TextSpan(
+                      children: [
+                        TextSpan(
+                          text: draft.toStringAsFixed(1),
+                          style: TextStyle(
+                            fontSize: 48,
+                            fontWeight: FontWeight.bold,
+                            color: color,
+                          ),
+                        ),
+                        TextSpan(
+                          text: ' g',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w500,
+                            color: color.withOpacity(0.7),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // 刻度 Slider
+                  SliderTheme(
+                    data: SliderTheme.of(ctx2).copyWith(
+                      activeTrackColor: color,
+                      inactiveTrackColor: color.withOpacity(0.15),
+                      thumbColor: color,
+                      overlayColor: color.withOpacity(0.12),
+                      trackHeight: 4,
+                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
+                      tickMarkShape: const RoundSliderTickMarkShape(tickMarkRadius: 1.5),
+                      activeTickMarkColor: color.withOpacity(0.5),
+                      inactiveTickMarkColor: color.withOpacity(0.2),
+                    ),
+                    child: Slider(
+                      value: draft,
+                      min: 0,
+                      max: maxValue,
+                      divisions: (maxValue * 10).toInt().clamp(10, 1000),
+                      onChanged: (v) => setSheetState(() => draft = v),
+                    ),
+                  ),
+                  // 刻度标注
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('0', style: Theme.of(ctx2).textTheme.labelSmall?.copyWith(color: Theme.of(ctx2).colorScheme.outline)),
+                        Text('${maxValue.toInt()}g', style: Theme.of(ctx2).textTheme.labelSmall?.copyWith(color: Theme.of(ctx2).colorScheme.outline)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+                  // 保存按钮
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: FilledButton(
+                      onPressed: () {
+                        Navigator.of(ctx2).pop();
+                        onSaved(draft);
+                      },
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.black,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      child: const Text('保存', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -616,3 +804,6 @@ class _MicroCell {
     required this.unit,
   });
 }
+
+/// 三大营养素类型（用于 slider 编辑回调）。
+enum _NutrientType { carbs, protein, fat }

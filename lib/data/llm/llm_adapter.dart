@@ -137,14 +137,14 @@ class LlmAdapter {
                     'enum': ['low', 'medium', 'high'],
                     'description': '对该食材识别和营养估算的置信度',
                   },
-                  // 矿物质：8 个数字，按位对应 铁/锌/铜/硒/碘/钼/铬/钴（mg，硒及以后为 μg）
+                  // 矿物质：11 个数字，按位对应 铁/锌/铜/硒/碘/钼/铬/钴/钙/钠/镁
                   // 不确定时填 0，不可省略元素。
                   'minerals': {
                     'type': 'array',
-                    'description': '微量矿物质（mg/μg），8 个元素，顺序：铁(mg) 锌(mg) 铜(mg) 硒(μg) 碘(μg) 钼(μg) 铬(μg) 钴(μg)，不确定时填 0',
+                    'description': '微量矿物质（mg/μg），11 个元素，顺序：铁(mg) 锌(mg) 铜(mg) 硒(μg) 碘(μg) 钼(μg) 铬(μg) 钴(μg) 钙(mg) 钠(mg) 镁(mg)，不确定时填 0',
                     'items': {'type': 'number'},
-                    'minItems': 8,
-                    'maxItems': 8,
+                    'minItems': 11,
+                    'maxItems': 11,
                   },
                   // 维生素：13 个数字，按位对应 A/B1/B2/B3/B5/B6/B7/B9/B12/C/D/E/K
                   // 不确定时填 0，不可省略元素。
