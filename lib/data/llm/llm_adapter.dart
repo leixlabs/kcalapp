@@ -137,8 +137,26 @@ class LlmAdapter {
                     'enum': ['low', 'medium', 'high'],
                     'description': '对该食材识别和营养估算的置信度',
                   },
+                  // 矿物质：8 个数字，按位对应 铁/锌/铜/硒/碘/钼/铬/钴（mg，硒及以后为 μg）
+                  // 不确定时填 0，不可省略元素。
+                  'minerals': {
+                    'type': 'array',
+                    'description': '微量矿物质（mg/μg），8 个元素，顺序：铁(mg) 锌(mg) 铜(mg) 硒(μg) 碘(μg) 钼(μg) 铬(μg) 钴(μg)，不确定时填 0',
+                    'items': {'type': 'number'},
+                    'minItems': 8,
+                    'maxItems': 8,
+                  },
+                  // 维生素：13 个数字，按位对应 A/B1/B2/B3/B5/B6/B7/B9/B12/C/D/E/K
+                  // 不确定时填 0，不可省略元素。
+                  'vitamins': {
+                    'type': 'array',
+                    'description': '维生素（mg/μg），13 个元素，顺序：VA(μg) VB1(mg) VB2(mg) VB3(mg) VB5(mg) VB6(mg) VB7(μg) VB9(μg) VB12(μg) VC(mg) VD(μg) VE(mg) VK(μg)，不确定时填 0',
+                    'items': {'type': 'number'},
+                    'minItems': 13,
+                    'maxItems': 13,
+                  },
                 },
-                'required': ['name', 'weight_g', 'kcal', 'carbs_g', 'protein_g', 'fat_g', 'confidence'],
+                'required': ['name', 'weight_g', 'kcal', 'carbs_g', 'protein_g', 'fat_g', 'confidence', 'minerals', 'vitamins'],
                 'additionalProperties': false,
               },
             },

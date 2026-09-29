@@ -31,24 +31,46 @@ pip install -r requirements.txt
 ## Running tests (simulator - recommended)
 
 ```bash
-./appium/run.sh               # Full pipeline: build -> boot sim -> install app -> push test image -> start mock -> pytest
-./appium/run.sh --skip-build  # Skip the Flutter build step when the app binary already exists
+./appium/run.sh               # Build -> boot selected simulator -> install app/image -> start/reuse mock -> run the core journey
+./appium/run.sh --skip-build  # Skip Flutter build when the simulator app already exists
 ```
+
+The default run verifies one ordered user journey:
+
+1. Add an LLM profile, validate its connection to the mock, and save it as the
+   active profile.
+2. Pick the simulator photo, recognize it through the mock, save the meal, and
+   verify that the image request reached the mock.
+3. Verify the saved meal on the home diary, open the calendar and select today,
+   then inspect the saved meal's ingredients and nutrition details.
+
+The journey uses a uniquely named profile and leaves the resulting test data in
+the simulator. It reuses a healthy Mock LLM already listening on `MOCK_PORT`;
+an occupied port that is not a healthy mock is reported as an error. To run the
+older granular regression cases separately:
+
+```bash
+cd appium
+.venv/bin/python -m pytest tests/test_app.py -v
+```
+
+Set `IOS_DEVICE_NAME` (default `iPhone 17`) or `IOS_SIMULATOR_UDID` to select a
+simulator. `MOCK_PORT`, `MOCK_BASE_URL`, and `APPIUM_SERVER` can be overridden
+for custom local test environments.
 
 ## Running tests (real device)
 
-Real devices require WebDriverAgent signing. Prepare:
-
-1. Open `ios/Runner.xcworkspace` in Xcode and assign your development Team.
-2. Discover the device UDID: `xcrun xctrace list devices`
-3. Execute:
+`run.sh` is simulator-only. A real-device run additionally requires a signed
+WebDriverAgent, the app installed on the device, the generated test image in
+its photo library, and a mock URL reachable from the device. After preparing
+those prerequisites, run the same journey directly:
 
 ```bash
 export APPIUM_REAL_DEVICE=1
 export IOS_UDID=<your device UDID>
 export XCODE_ORG_ID=<your Apple Team ID>
-export MOCK_BASE_URL=http://<Mac LAN IP>:8611/v1   # real device cannot reach 127.0.0.1
-./appium/run.sh --skip-build   # Build + install the debug IPA beforehand with `flutter build ios --debug`
+export MOCK_BASE_URL=http://<Mac LAN IP>:8611/v1
+cd appium && .venv/bin/python -m pytest tests/test_user_journey.py -v
 ```
 
 ## Test cases covered

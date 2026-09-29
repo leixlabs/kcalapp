@@ -253,6 +253,9 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
             ),
             const SizedBox(height: 24),
 
+            // 微量营养素
+            _buildMineralsSection(theme),
+
             // AI 提示
             if (draft.notes != null && draft.notes!.isNotEmpty)
               Padding(
@@ -307,7 +310,7 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
             width: 32,
             alignment: Alignment.center,
             child: Text(
-              _servings % 1 == 0 ? '${_servings.toInt()}' : '${_servings}',
+              _servings % 1 == 0 ? '${_servings.toInt()}' : '$_servings',
               style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
             ),
           ),
@@ -329,6 +332,125 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
         const SizedBox(height: 4),
         Text(value, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
       ],
+    );
+  }
+
+  /// 汇总所有食材的微量营养素，仅在至少有一个字段非 null 时渲染区块。
+  /// 微量营养素区块：矿物质 + 维生素，均无数据时不渲染。
+  Widget _buildMineralsSection(ThemeData theme) {
+    // 对每个枚举位按 servings 汇总所有食材的值，全为 null 时该位返回 null
+    double? sumMineral(Mineral m) {
+      final vals = _foodItems
+          .map((e) => e.getMineral(m))
+          .whereType<double>()
+          .toList();
+      if (vals.isEmpty) return null;
+      return vals.fold(0.0, (a, b) => a + b) * _servings;
+    }
+
+    double? sumVitamin(Vitamin v) {
+      final vals = _foodItems
+          .map((e) => e.getVitamin(v))
+          .whereType<double>()
+          .toList();
+      if (vals.isEmpty) return null;
+      return vals.fold(0.0, (a, b) => a + b) * _servings;
+    }
+
+    final hasMinerals = _foodItems.any((e) => e.minerals != null);
+    final hasVitamins = _foodItems.any((e) => e.vitamins != null);
+
+    if (!hasMinerals && !hasVitamins) return const SizedBox.shrink();
+
+    String fmt(double? v, {int decimals = 1}) {
+      if (v == null) return '—';
+      // 极小值直接显示 0
+      if (v < 0.05) return '0';
+      return v.toStringAsFixed(decimals);
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('微量营养素', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          if (hasMinerals) ...[
+            Text('矿物质', style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.outline)),
+            const SizedBox(height: 6),
+            _buildMicroRow(
+              theme,
+              Mineral.values.map((m) => _MicroCell(
+                symbol: m.symbol,
+                label: m.label,
+                value: fmt(sumMineral(m)),
+                unit: m.unit,
+              )).toList(),
+            ),
+            const SizedBox(height: 12),
+          ],
+          if (hasVitamins) ...[
+            Text('维生素', style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.outline)),
+            const SizedBox(height: 6),
+            _buildMicroRow(
+              theme,
+              Vitamin.values.map((v) => _MicroCell(
+                symbol: v.label,
+                label: v.fullLabel.replaceFirst('维生素', ''),
+                value: fmt(sumVitamin(v)),
+                unit: v.unit,
+              )).toList(),
+            ),
+          ],
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+
+  /// 将 cells 分成每行最多 4 格的 Wrap 布局。
+  Widget _buildMicroRow(ThemeData theme, List<_MicroCell> cells) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Wrap(
+        spacing: 0,
+        runSpacing: 8,
+        children: cells.map((c) => SizedBox(
+          width: (MediaQuery.of(context).size.width - 32 - 24) / 4,
+          child: Column(
+            children: [
+              Text(
+                c.symbol,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.outline,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.4,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '${c.value}${c.unit}',
+                style: theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.bold),
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                c.label,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.outline,
+                  fontSize: 10,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        )).toList(),
+      ),
     );
   }
 
@@ -479,4 +601,18 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
       }
     }
   }
+}
+
+/// 微量营养素单元格数据。
+class _MicroCell {
+  final String symbol;
+  final String label;
+  final String value;
+  final String unit;
+  const _MicroCell({
+    required this.symbol,
+    required this.label,
+    required this.value,
+    required this.unit,
+  });
 }

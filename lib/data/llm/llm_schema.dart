@@ -59,6 +59,16 @@ class LlmSchemaValidator {
       final fatG = _parseDouble(item['fat_g']);
       final confidence = FoodItem.parseConfidence(item['confidence'] as String?);
 
+      // 矿物质和维生素：LLM 返回定长数组，解析失败时为 null
+      final mineralsRaw = item['minerals'];
+      final vitaminsRaw = item['vitamins'];
+      final minerals = (mineralsRaw is List)
+          ? MicronutrientList.fromLlmList(mineralsRaw, length: Mineral.values.length)
+          : null;
+      final vitamins = (vitaminsRaw is List)
+          ? MicronutrientList.fromLlmList(vitaminsRaw, length: Vitamin.values.length)
+          : null;
+
       if (kcal < 0 || carbsG < 0 || proteinG < 0 || fatG < 0 || weightG < 0) {
         throw LlmSchemaException('食材「$name」存在负数数值');
       }
@@ -72,6 +82,8 @@ class LlmSchemaValidator {
         fatG: fatG,
         confidence: confidence,
         sortOrder: i,
+        minerals: minerals,
+        vitamins: vitamins,
       ));
     }
 
@@ -109,6 +121,8 @@ class LlmSchemaValidator {
     }
     throw LlmSchemaException('数值类型无效: $value');
   }
+
+
 
   static MealDraft toDraft(LlmRecognitionResult result, {String? photoTempPath, MealType? mealType}) {
     return MealDraft(

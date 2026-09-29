@@ -16,7 +16,7 @@ class AppDatabase {
     final path = p.join(dir.path, 'calory.db');
     return openDatabase(
       path,
-      version: 2,
+      version: 4,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
       onConfigure: (db) async {
@@ -65,6 +65,8 @@ class AppDatabase {
         fat_g REAL NOT NULL,
         confidence TEXT,
         sort_order INTEGER NOT NULL DEFAULT 0,
+        minerals_json TEXT,
+        vitamins_json TEXT,
         FOREIGN KEY (meal_id) REFERENCES meals(id) ON DELETE CASCADE
       )
     ''');
@@ -100,6 +102,17 @@ class AppDatabase {
       await db.execute(
         'ALTER TABLE llm_profiles ADD COLUMN use_json_mode INTEGER NOT NULL DEFAULT 1',
       );
+    }
+    if (oldVersion < 3) {
+      await db.execute('ALTER TABLE food_items ADD COLUMN calcium_mg REAL');
+      await db.execute('ALTER TABLE food_items ADD COLUMN sodium_mg REAL');
+      await db.execute('ALTER TABLE food_items ADD COLUMN iron_mg REAL');
+      await db.execute('ALTER TABLE food_items ADD COLUMN magnesium_mg REAL');
+    }
+    if (oldVersion < 4) {
+      // 用两列 JSON 替代之前的散列列，旧数据不迁移（minerals/vitamins 为 null）
+      await db.execute('ALTER TABLE food_items ADD COLUMN minerals_json TEXT');
+      await db.execute('ALTER TABLE food_items ADD COLUMN vitamins_json TEXT');
     }
   }
 

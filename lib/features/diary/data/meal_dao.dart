@@ -98,7 +98,7 @@ class MealDao {
       for (var i = 0; i < meal.foodItems.length; i++) {
         final item = meal.foodItems[i];
         await tx.rawInsert(
-          'INSERT INTO food_items (meal_id, name, weight_g, kcal, carbs_g, protein_g, fat_g, confidence, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          'INSERT INTO food_items (meal_id, name, weight_g, kcal, carbs_g, protein_g, fat_g, confidence, sort_order, minerals_json, vitamins_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
           [
             mealId,
             item.name,
@@ -109,6 +109,8 @@ class MealDao {
             item.fatG,
             item.confidence?.name,
             i,
+            MicronutrientList.toJson(item.minerals),
+            MicronutrientList.toJson(item.vitamins),
           ],
         );
       }
@@ -136,7 +138,7 @@ class MealDao {
       for (var i = 0; i < meal.foodItems.length; i++) {
         final item = meal.foodItems[i];
         await tx.rawInsert(
-          'INSERT INTO food_items (meal_id, name, weight_g, kcal, carbs_g, protein_g, fat_g, confidence, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          'INSERT INTO food_items (meal_id, name, weight_g, kcal, carbs_g, protein_g, fat_g, confidence, sort_order, minerals_json, vitamins_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
           [
             meal.id,
             item.name,
@@ -147,6 +149,8 @@ class MealDao {
             item.fatG,
             item.confidence?.name,
             i,
+            MicronutrientList.toJson(item.minerals),
+            MicronutrientList.toJson(item.vitamins),
           ],
         );
       }
@@ -191,6 +195,14 @@ class MealDao {
         fatG: (i['fat_g'] as num?)?.toDouble() ?? 0,
         confidence: FoodItem.parseConfidence(i['confidence'] as String?),
         sortOrder: i['sort_order'] as int? ?? 0,
+        minerals: MicronutrientList.fromJson(
+          i['minerals_json'] as String?,
+          length: Mineral.values.length,
+        ),
+        vitamins: MicronutrientList.fromJson(
+          i['vitamins_json'] as String?,
+          length: Vitamin.values.length,
+        ),
       )).toList(),
       createdAt: DateTime.parse(row['created_at'] as String),
       updatedAt: DateTime.parse(row['updated_at'] as String),
