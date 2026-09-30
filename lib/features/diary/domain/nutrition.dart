@@ -1,3 +1,5 @@
+import '../../../core/utils/format_utils.dart';
+
 class Nutrition {
   final double kcal;
   final double carbsG;
@@ -11,7 +13,12 @@ class Nutrition {
     required this.fatG,
   });
 
-  static const Nutrition zero = Nutrition(kcal: 0, carbsG: 0, proteinG: 0, fatG: 0);
+  static const Nutrition zero = Nutrition(
+    kcal: 0,
+    carbsG: 0,
+    proteinG: 0,
+    fatG: 0,
+  );
 
   static Nutrition? tryParse({
     required double? kcal,
@@ -23,36 +30,38 @@ class Nutrition {
     if (values.any((v) => v == null || v.isNaN || v.isInfinite || v < 0)) {
       return null;
     }
-    return Nutrition(kcal: kcal!, carbsG: carbsG!, proteinG: proteinG!, fatG: fatG!);
+    return Nutrition(
+      kcal: kcal!,
+      carbsG: carbsG!,
+      proteinG: proteinG!,
+      fatG: fatG!,
+    );
   }
 
   Nutrition operator +(Nutrition other) => Nutrition(
-        kcal: kcal + other.kcal,
-        carbsG: carbsG + other.carbsG,
-        proteinG: proteinG + other.proteinG,
-        fatG: fatG + other.fatG,
-      );
+    kcal: kcal + other.kcal,
+    carbsG: carbsG + other.carbsG,
+    proteinG: proteinG + other.proteinG,
+    fatG: fatG + other.fatG,
+  );
 
   Nutrition operator *(double factor) => Nutrition(
-        kcal: kcal * factor,
-        carbsG: carbsG * factor,
-        proteinG: proteinG * factor,
-        fatG: fatG * factor,
-      );
+    kcal: kcal * factor,
+    carbsG: carbsG * factor,
+    proteinG: proteinG * factor,
+    fatG: fatG * factor,
+  );
 
   Nutrition scaledByServings(double servings) => this * servings;
 
   String get kcalDisplay => kcal.round().toString();
-  String get carbsDisplay => _formatGrams(carbsG);
-  String get proteinDisplay => _formatGrams(proteinG);
-  String get fatDisplay => _formatGrams(fatG);
-
-  static String _formatGrams(double g) {
-    return g.toStringAsFixed(g == g.roundToDouble() ? 0 : 1);
-  }
+  String get carbsDisplay => FormatUtils.formatGramValue(carbsG);
+  String get proteinDisplay => FormatUtils.formatGramValue(proteinG);
+  String get fatDisplay => FormatUtils.formatGramValue(fatG);
 
   @override
-  String toString() => 'Nutrition(kcal: $kcalDisplay, carbs: $carbsDisplay, protein: $proteinDisplay, fat: $fatDisplay)';
+  String toString() =>
+      'Nutrition(kcal: $kcalDisplay, carbs: $carbsDisplay, protein: $proteinDisplay, fat: $fatDisplay)';
 
   @override
   bool operator ==(Object other) =>

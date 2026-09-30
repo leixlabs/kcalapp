@@ -248,14 +248,14 @@ def _delete_all_profiles(driver):
             except NoSuchElementException:
                 raise AssertionError("Could not locate a profile delete control")
         time.sleep(0.8)
-        # Confirm dialog: tap "delete" (English label per source)
+        # Confirm dialog: tap the delete button (Chinese labels)
         try:
             helpers.wait_for_any(
                 driver,
-                [helpers.by_label_contains("delete profile"), helpers.by_label("delete")],
+                [helpers.by_label_contains("删除配置"), helpers.by_label("删除")],
                 timeout=6,
             )
-            helpers.wait_for_clickable(driver, helpers.by_label("delete")).click()
+            helpers.wait_for_clickable(driver, helpers.by_label("删除")).click()
         except Exception:
             pytest.fail("Deleting a profile did not show a confirmation dialog")
         time.sleep(1.0)
@@ -291,7 +291,7 @@ class Test2LlmEmptyState:
         assert helpers.exists(driver, helpers.by_label("添加新配置"))
         assert helpers.exists(driver, helpers.by_label_contains("HTTP 调试面板"))
         assert helpers.exists(driver, helpers.by_label_contains("暂无配置"))
-        assert helpers.exists(driver, helpers.by_label_contains("请添加 LLM 服务"))
+        assert helpers.exists(driver, helpers.by_label_contains("添加 LLM 服务"))
         _reset_to_home(driver)
 
 
@@ -489,10 +489,10 @@ class Test8DeleteLlmProfile:
         )
         helpers.wait_for_any(
             driver,
-            [helpers.by_label_contains("delete profile"), helpers.by_label("delete")],
+            [helpers.by_label_contains("删除配置"), helpers.by_label("删除")],
             timeout=8,
         )
-        helpers.wait_for_clickable(driver, helpers.by_label("delete")).click()
+        helpers.wait_for_clickable(driver, helpers.by_label("删除")).click()
         time.sleep(1.2)
         assert not helpers.exists(driver, helpers.by_label_contains(Test7EditLlmProfile.NEW_NAME))
         assert helpers.exists(driver, helpers.by_label_contains("Mock LLM"))
@@ -615,21 +615,24 @@ class Test11HomeWithData:
 # 12. Calendar kcal badge
 # ---------------------------------------------------------------------------
 class Test12Calendar:
-    def test_calendar_drawer_shows_complete_selected_day_kcal(self, driver):
+    def test_calendar_drawer_shows_day_kcal_badge(self, driver):
+        """Calendar day cells expose their kcal total via an accessibility label."""
         _reset_to_home(driver)
         date_btn = helpers.wait_for(
             driver, helpers.by_label_contains("选择日期"), timeout=12
         )
         date_btn.click()
-        selected_kcal = helpers.wait_for(
-            driver, helpers.by_label_contains("所选日期总热量"), timeout=15
-        )
-        selected_day_label = selected_kcal.get_attribute("label") or ""
-        kcal_value = selected_day_label.split("总热量", 1)[-1]
-        kcal_value = kcal_value.replace("kcal", "").strip()
-        assert kcal_value.isdigit(), (
-            f"Selected-day kcal is incomplete: {selected_day_label}"
-        )
+        time.sleep(0.8)
+        labels = [
+            e.get_attribute("label") or ""
+            for e in driver.find_elements(
+                AppiumBy.IOS_PREDICATE, 'label CONTAINS "千卡"'
+            )
+        ]
+        assert any(
+            label.endswith("千卡") and any(ch.isdigit() for ch in label)
+            for label in labels
+        ), f"Calendar day cells should show a kcal badge, got: {labels}"
 
 
 # ---------------------------------------------------------------------------

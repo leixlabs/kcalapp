@@ -81,12 +81,12 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
       await repo.softDeleteMeal(_meal!.id!);
       ref.invalidate(dailySummaryProvider);
       ref.invalidate(weeklyFoodCategoryProgressProvider);
+      ref.invalidate(weeklyKcalProvider);
       if (meal != null) {
         unawaited(
-          ref.read(mealReviewControllerProvider).refresh(
-            meal.dateTime,
-            meal.mealType,
-          ),
+          ref
+              .read(mealReviewControllerProvider)
+              .refresh(meal.dateTime, meal.mealType),
         );
       }
       if (mounted) context.pop();
@@ -169,24 +169,14 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
                       Expanded(
                         child: InkWell(
                           onTap: _editMealName,
+                          borderRadius: BorderRadius.circular(8),
                           child: Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: Row(
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    meal.name,
-                                    style: theme.textTheme.headlineSmall
-                                        ?.copyWith(fontWeight: FontWeight.w700),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Icon(
-                                  Icons.edit,
-                                  size: 20,
-                                  color: theme.colorScheme.primary,
-                                ),
-                              ],
+                            padding: const EdgeInsets.symmetric(vertical: 2),
+                            child: Text(
+                              meal.name,
+                              style: theme.textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
                         ),
@@ -285,7 +275,9 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
                             _bigStat(
                               context,
                               label: '碳水',
-                              value: _fmtG(nutrition.carbsG),
+                              value: FormatUtils.formatGramValue(
+                                nutrition.carbsG,
+                              ),
                               unit: 'g',
                               color: AppColors.carbs,
                               onTap: () =>
@@ -294,7 +286,9 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
                             _bigStat(
                               context,
                               label: '蛋白质',
-                              value: _fmtG(nutrition.proteinG),
+                              value: FormatUtils.formatGramValue(
+                                nutrition.proteinG,
+                              ),
                               unit: 'g',
                               color: AppColors.protein,
                               onTap: () =>
@@ -303,7 +297,9 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
                             _bigStat(
                               context,
                               label: '脂肪',
-                              value: _fmtG(nutrition.fatG),
+                              value: FormatUtils.formatGramValue(
+                                nutrition.fatG,
+                              ),
                               unit: 'g',
                               color: AppColors.fat,
                               onTap: () => _editNutrient(_EditableNutrient.fat),
@@ -454,7 +450,10 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
 
     final String hint;
     if (review?.status == MealReviewStatus.refreshing) {
-      final foodCount = group.fold<int>(0, (sum, m) => sum + m.foodItems.length);
+      final foodCount = group.fold<int>(
+        0,
+        (sum, m) => sum + m.foodItems.length,
+      );
       hint = content ?? '正在根据 $foodCount 项食物更新评价…';
     } else if (review?.status == MealReviewStatus.failed && content == null) {
       hint = '评价生成失败，点击重新生成';
@@ -468,7 +467,9 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
+        color: theme.colorScheme.surfaceContainerHighest.withValues(
+          alpha: 0.45,
+        ),
         borderRadius: BorderRadius.circular(16),
       ),
       child: InkWell(
@@ -1011,6 +1012,7 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
         setState(() => _meal = mealToSave);
         ref.invalidate(dailySummaryProvider);
         ref.invalidate(weeklyFoodCategoryProgressProvider);
+        ref.invalidate(weeklyKcalProvider);
         _refreshReviewsAfterEdit(previous, mealToSave);
       } catch (error) {
         if (mounted) {
@@ -1033,9 +1035,6 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
       unawaited(controller.refresh(key.date, key.mealType));
     }
   }
-
-  String _fmtG(double v) =>
-      v >= 10 ? v.round().toString() : v.toStringAsFixed(1);
 }
 
 // ─── 食材行组件 ────────────────────────────────────────────────────────────────

@@ -133,7 +133,7 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
                     child: TextField(
                       controller: _nameController,
                       decoration: const InputDecoration(
-                        labelText: 'meal name',
+                        labelText: '餐名',
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.zero,
                       ),
@@ -149,8 +149,8 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.primaryContainer.withOpacity(
-                        0.5,
+                      color: theme.colorScheme.primaryContainer.withValues(
+                        alpha: 0.5,
                       ),
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -191,8 +191,9 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
                     vertical: 10,
                   ),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerHighest
-                        .withOpacity(0.5),
+                    color: theme.colorScheme.surfaceContainerHighest.withValues(
+                      alpha: 0.5,
+                    ),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
@@ -255,7 +256,9 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
                   horizontal: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primaryContainer.withOpacity(0.3),
+                  color: theme.colorScheme.primaryContainer.withValues(
+                    alpha: 0.3,
+                  ),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Row(
@@ -354,7 +357,7 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppColors.aiEstimate.withOpacity(0.1),
+                    color: AppColors.aiEstimate.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
@@ -388,7 +391,9 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
   Widget _buildServingsStepper(ThemeData theme) {
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: theme.colorScheme.outline.withOpacity(0.3)),
+        border: Border.all(
+          color: theme.colorScheme.outline.withValues(alpha: 0.3),
+        ),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -457,7 +462,7 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
               width: 24,
               height: 2,
               decoration: BoxDecoration(
-                color: color.withOpacity(0.45),
+                color: color.withValues(alpha: 0.45),
                 borderRadius: BorderRadius.circular(1),
               ),
             ),
@@ -868,12 +873,12 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
     final totalKcal = _foodItems.fold(0.0, (sum, item) => sum + item.kcal);
     if (totalKcal <= 0) {
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('kcal must be > 0')));
+          .showSnackBar(const SnackBar(content: Text('热量必须大于 0')));
       return;
     }
     if (_nameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('meal name required')));
+          .showSnackBar(const SnackBar(content: Text('请输入餐名')));
       return;
     }
 
@@ -907,9 +912,8 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
       ref.read(recognitionDraftProvider.notifier).state = null;
       ref.invalidate(dailySummaryProvider);
       ref.invalidate(weeklyFoodCategoryProgressProvider);
-      unawaited(
-        ref.read(mealReviewControllerProvider).refreshForMeal(mealId),
-      );
+      ref.invalidate(weeklyKcalProvider);
+      unawaited(ref.read(mealReviewControllerProvider).refreshForMeal(mealId));
       if (mounted) context.go('/');
     } catch (e) {
       if (savedPhotoPath != null) {

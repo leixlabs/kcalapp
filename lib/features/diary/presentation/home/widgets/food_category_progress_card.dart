@@ -61,7 +61,7 @@ class _CategoryProgressRow extends StatelessWidget {
               ),
             ),
             Text(
-              '${_formatGrams(grams)} / ${_formatGrams(target)} g',
+              '${grams.round()} / ${target.round()} g',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.outline,
                 fontFeatures: const [FontFeature.tabularFigures()],
@@ -81,10 +81,6 @@ class _CategoryProgressRow extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  String _formatGrams(double value) {
-    return value.round().toString();
   }
 
   Color _categoryColor(FoodCategory category, ThemeData theme) =>

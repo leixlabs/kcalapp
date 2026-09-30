@@ -51,6 +51,23 @@ final weeklyFoodCategoryProgressProvider =
       return aggregateWeeklyFoodCategories(meals);
     });
 
+/// 本周每日总热量，用于首页周日期条。
+final weeklyKcalProvider =
+    FutureProvider.family<Map<DateTime, double>, DateTime>((
+      ref,
+      selectedDate,
+    ) async {
+      final monday = DateTime(
+        selectedDate.year,
+        selectedDate.month,
+        selectedDate.day,
+      ).subtract(Duration(days: selectedDate.weekday - 1));
+      final nextMonday = monday.add(const Duration(days: 7));
+      final mealRepo = ref.watch(mealRepositoryProvider);
+      final meals = await mealRepo.getMealsBetween(monday, nextMonday);
+      return aggregateDailyKcal(meals);
+    });
+
 final mealReviewProvider =
     FutureProvider.family<MealReview?, ({DateTime date, MealType mealType})>((
       ref,

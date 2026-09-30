@@ -39,78 +39,49 @@ class CalendarDrawer extends ConsumerWidget {
               child: Text('日历加载失败: $error'),
             ),
             data: (kcalMap) {
-              final isSelectedMonth =
-                  focusedDay.year == selectedDate.year &&
-                  focusedDay.month == selectedDate.month;
-              final selectedKcal =
-                  kcalMap[DateTime(
-                    selectedDate.year,
-                    selectedDate.month,
-                    selectedDate.day,
-                  )] ??
-                  0;
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TableCalendar(
-                    firstDay: DateTime(2024, 1, 1),
-                    lastDay: DateTime.now().add(const Duration(days: 365)),
-                    focusedDay: focusedDay,
-                    selectedDayPredicate: (day) =>
-                        FormatUtils.isSameDay(day, selectedDate),
-                    onDaySelected: (selected, focused) {
-                      onFocusedDayChanged(focused);
-                      onDateSelected(selected);
-                    },
-                    onPageChanged: onFocusedDayChanged,
-                    locale: 'zh_CN',
-                    rowHeight: 54,
-                    daysOfWeekHeight: 24,
-                    calendarStyle: CalendarStyle(
-                      cellMargin: const EdgeInsets.all(2),
-                      selectedDecoration: BoxDecoration(
-                        color: theme.colorScheme.primary,
-                        shape: BoxShape.circle,
-                      ),
-                      todayDecoration: BoxDecoration(
-                        color: theme.colorScheme.primaryContainer,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    headerStyle: const HeaderStyle(
-                      formatButtonVisible: false,
-                      titleCentered: true,
-                      titleTextStyle: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    calendarBuilders: CalendarBuilders(
-                      defaultBuilder: (context, day, _) =>
-                          _buildDayCell(theme, day, kcalMap),
-                      selectedBuilder: (context, day, _) =>
-                          _buildDayCell(theme, day, kcalMap, isSelected: true),
-                      todayBuilder: (context, day, _) =>
-                          _buildDayCell(theme, day, kcalMap, isToday: true),
-                      outsideBuilder: (context, day, _) =>
-                          _buildDayCell(theme, day, kcalMap, isOutside: true),
-                    ),
+              return TableCalendar(
+                firstDay: DateTime(2024, 1, 1),
+                lastDay: DateTime.now().add(const Duration(days: 365)),
+                focusedDay: focusedDay,
+                selectedDayPredicate: (day) =>
+                    FormatUtils.isSameDay(day, selectedDate),
+                onDaySelected: (selected, focused) {
+                  onFocusedDayChanged(focused);
+                  onDateSelected(selected);
+                },
+                onPageChanged: onFocusedDayChanged,
+                locale: 'zh_CN',
+                rowHeight: 54,
+                daysOfWeekHeight: 24,
+                calendarStyle: CalendarStyle(
+                  cellMargin: const EdgeInsets.all(2),
+                  selectedDecoration: BoxDecoration(
+                    color: theme.colorScheme.primary,
+                    shape: BoxShape.circle,
                   ),
-                  if (isSelectedMonth)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-                      child: Align(
-                        alignment: Alignment.centerRight,
-                        child: Text(
-                          '所选日期总热量 ${selectedKcal.round()} kcal',
-                          style: theme.textTheme.labelLarge?.copyWith(
-                            color: theme.colorScheme.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
+                  todayDecoration: BoxDecoration(
+                    color: theme.colorScheme.primaryContainer,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                headerStyle: const HeaderStyle(
+                  formatButtonVisible: false,
+                  titleCentered: true,
+                  titleTextStyle: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                calendarBuilders: CalendarBuilders(
+                  defaultBuilder: (context, day, _) =>
+                      _buildDayCell(theme, day, kcalMap),
+                  selectedBuilder: (context, day, _) =>
+                      _buildDayCell(theme, day, kcalMap, isSelected: true),
+                  todayBuilder: (context, day, _) =>
+                      _buildDayCell(theme, day, kcalMap, isToday: true),
+                  outsideBuilder: (context, day, _) =>
+                      _buildDayCell(theme, day, kcalMap, isOutside: true),
+                ),
               );
             },
           ),

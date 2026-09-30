@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../data/llm/llm_adapter.dart';
 import '../domain/llm_profile.dart';
 import '../../../app/providers.dart';
+import '../../../core/widgets/states.dart';
 
 class LlmSettingsPage extends ConsumerStatefulWidget {
   const LlmSettingsPage({super.key});
@@ -87,30 +88,10 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
           }
           if (index == 3) {
             if (_profiles.isEmpty) {
-              return Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  children: [
-                    Icon(
-                      Icons.cloud_off,
-                      size: 48,
-                      color: theme.colorScheme.outline,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '暂无配置，请添加 LLM 服务',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.outline,
-                      ),
-                    ),
-                    Text(
-                      '添加后即可使用拍照识别功能',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.outline,
-                      ),
-                    ),
-                  ],
-                ),
+              return const EmptyState(
+                icon: Icons.cloud_off,
+                title: '暂无配置',
+                subtitle: '添加 LLM 服务后即可使用拍照识别功能',
               );
             }
             return const SizedBox.shrink();
@@ -258,14 +239,12 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
     showDialog(
       context: context,
       builder: (dialogCtx) => AlertDialog(
-        title: const Text('delete profile'),
-        content: Text(
-          'delete profile "${profile.displayName}"? API key will also be removed.',
-        ),
+        title: const Text('删除配置'),
+        content: Text('确定删除配置「${profile.displayName}」？其 API Key 也会一并移除。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogCtx),
-            child: const Text('cancel'),
+            child: const Text('取消'),
           ),
           TextButton(
             onPressed: () async {
@@ -279,7 +258,7 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
                 _loadProfiles();
               }
             },
-            child: const Text('delete'),
+            child: const Text('删除'),
           ),
         ],
       ),

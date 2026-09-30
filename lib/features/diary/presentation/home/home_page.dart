@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/providers.dart';
+import '../../../../app/theme.dart';
 import '../../application/diary_providers.dart';
 import '../../../../core/utils/format_utils.dart';
 import '../../../../core/widgets/states.dart';
@@ -32,6 +33,9 @@ class _HomePageState extends ConsumerState<HomePage> {
   Widget build(BuildContext context) {
     final summaryAsync = ref.watch(dailySummaryProvider);
     final selectedDate = ref.watch(selectedDateProvider);
+    final isToday = FormatUtils.isToday(selectedDate);
+    final weekKcal =
+        ref.watch(weeklyKcalProvider(selectedDate)).valueOrNull ?? const {};
 
     return Scaffold(
       body: SafeArea(
@@ -67,10 +71,11 @@ class _HomePageState extends ConsumerState<HomePage> {
                       : const SizedBox.shrink(),
                 ),
               ),
-              // 本周日期横向视图
+              // 本周日期横向视图（含每日 kcal）
               SliverToBoxAdapter(
                 child: _WeekDatePicker(
                   selectedDate: selectedDate,
+                  kcalByDay: weekKcal,
                   onDateSelected: (day) {
                     ref.read(selectedDateProvider.notifier).state = day;
                     if (day.year != _focusedDay.year ||
@@ -88,12 +93,14 @@ class _HomePageState extends ConsumerState<HomePage> {
                 child: _buildProgressSection(context, summary, selectedDate),
               ),
               const SliverToBoxAdapter(child: SizedBox(height: 16)),
-              // 今日饮食记录标题
+              // 当日饮食记录标题
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Text(
-                    '今日饮食记录',
+                    isToday
+                        ? '今日饮食记录'
+                        : '${FormatUtils.formatDateShort(selectedDate)}饮食记录',
                     style: Theme.of(context).textTheme.titleMedium
                         ?.copyWith(fontWeight: FontWeight.w700),
                   ),
@@ -283,10 +290,10 @@ class _HomePageState extends ConsumerState<HomePage> {
       children: [
         _buildMacroItem(
           context: context,
-          label: '碳水化合物',
+          label: '碳水',
           consumed: summary.consumed.carbsG,
           target: summary.target?.carbsG,
-          color: const Color(0xFFC89B3C),
+          color: AppColors.carbs,
           icon: Icons.grain,
         ),
         const SizedBox(width: 12),
@@ -295,7 +302,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           label: '蛋白质',
           consumed: summary.consumed.proteinG,
           target: summary.target?.proteinG,
-          color: const Color(0xFFC75B4A),
+          color: AppColors.protein,
           icon: Icons.egg_outlined,
         ),
         const SizedBox(width: 12),
@@ -304,7 +311,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           label: '脂肪',
           consumed: summary.consumed.fatG,
           target: summary.target?.fatG,
-          color: const Color(0xFF7A9B55),
+          color: AppColors.fat,
           icon: Icons.water_drop_outlined,
         ),
       ],
@@ -434,7 +441,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             text: TextSpan(
               children: [
                 TextSpan(
-                  text: _formatG(consumed),
+                  text: FormatUtils.formatGramValue(consumed),
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                     color: theme.colorScheme.onSurface,
@@ -442,7 +449,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 ),
                 if (hasTarget)
                   TextSpan(
-                    text: ' / ${_formatG(target)}g',
+                    text: ' / ${FormatUtils.formatGramValue(target)}g',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.outline,
                     ),
@@ -470,11 +477,6 @@ class _HomePageState extends ConsumerState<HomePage> {
         ],
       ),
     );
-  }
-
-  String _formatG(double? v) {
-    if (v == null) return '0';
-    return v >= 10 ? v.round().toString() : v.toStringAsFixed(1);
   }
 
   // ─── 餐食分区列表 ──────────────────────────────────────────────────────────
@@ -524,33 +526,10 @@ class _HomePageState extends ConsumerState<HomePage> {
     if (sections.isEmpty) {
       sections.add(
         SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 32),
-            child: Center(
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.restaurant_menu,
-                    size: 48,
-                    color: Theme.of(context).colorScheme.outlineVariant,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    '今日暂无饮食记录',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.outline,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '点击右下角拍照按钮开始记录',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.outlineVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          child: EmptyState(
+            icon: Icons.restaurant_menu,
+            title: FormatUtils.isToday(selectedDate) ? '今日暂无饮食记录' : '该日暂无饮食记录',
+            subtitle: '点击右下角按钮拍照识别，添加一条饮食记录',
           ),
         ),
       );
@@ -607,6 +586,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           );
       ref.invalidate(dailySummaryProvider);
       ref.invalidate(weeklyFoodCategoryProgressProvider);
+      ref.invalidate(weeklyKcalProvider);
       unawaited(
         _processRecognition(
           messenger,
@@ -654,10 +634,12 @@ class _HomePageState extends ConsumerState<HomePage> {
 class _WeekDatePicker extends StatelessWidget {
   final DateTime selectedDate;
   final ValueChanged<DateTime> onDateSelected;
+  final Map<DateTime, double> kcalByDay;
 
   const _WeekDatePicker({
     required this.selectedDate,
     required this.onDateSelected,
+    this.kcalByDay = const {},
   });
 
   @override
@@ -669,18 +651,20 @@ class _WeekDatePicker extends StatelessWidget {
     );
 
     return SizedBox(
-      height: 72,
+      height: 88,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12),
         itemCount: 7,
         itemBuilder: (ctx, i) {
           final day = monday.add(Duration(days: i));
+          final dayKey = DateTime(day.year, day.month, day.day);
           final isSelected =
               day.year == selectedDate.year &&
               day.month == selectedDate.month &&
               day.day == selectedDate.day;
-          final isToday = _isToday(day);
+          final isToday = FormatUtils.isToday(day);
+          final kcal = kcalByDay[dayKey] ?? 0;
           const weekLabels = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
 
           return GestureDetector(
@@ -706,7 +690,7 @@ class _WeekDatePicker extends StatelessWidget {
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Text(
                     '${day.day}',
                     style: theme.textTheme.titleMedium?.copyWith(
@@ -720,6 +704,27 @@ class _WeekDatePicker extends StatelessWidget {
                           : FontWeight.normal,
                     ),
                   ),
+                  const SizedBox(height: 2),
+                  SizedBox(
+                    width: 40,
+                    height: 12,
+                    child: kcal > 0
+                        ? FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              kcal.round().toString(),
+                              maxLines: 1,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: isSelected
+                                    ? theme.colorScheme.onPrimary
+                                    : theme.colorScheme.primary,
+                              ),
+                            ),
+                          )
+                        : null,
+                  ),
                 ],
               ),
             ),
@@ -727,10 +732,5 @@ class _WeekDatePicker extends StatelessWidget {
         },
       ),
     );
-  }
-
-  bool _isToday(DateTime d) {
-    final now = DateTime.now();
-    return d.year == now.year && d.month == now.month && d.day == now.day;
   }
 }

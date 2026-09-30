@@ -70,19 +70,6 @@ class MealSection extends StatelessWidget {
                   text: TextSpan(
                     children: [
                       TextSpan(
-                        text: '${totalWeight.round()}g',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.outline,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      TextSpan(
-                        text: '/',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.outlineVariant,
-                        ),
-                      ),
-                      TextSpan(
                         text: '${totalKcal.round()}',
                         style: theme.textTheme.bodyLarge?.copyWith(
                           fontWeight: FontWeight.w700,
@@ -90,9 +77,22 @@ class MealSection extends StatelessWidget {
                         ),
                       ),
                       TextSpan(
-                        text: 'kcal',
+                        text: ' kcal',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.outline,
+                        ),
+                      ),
+                      TextSpan(
+                        text: '  ·  约 ',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.outlineVariant,
+                        ),
+                      ),
+                      TextSpan(
+                        text: '${totalWeight.round()}g',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.outline,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
@@ -173,7 +173,11 @@ class _MealReviewSummary extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.auto_awesome, size: 16, color: theme.colorScheme.primary),
+            Icon(
+              Icons.auto_awesome,
+              size: 16,
+              color: theme.colorScheme.primary,
+            ),
             const SizedBox(width: 6),
             Expanded(
               child: Text(
