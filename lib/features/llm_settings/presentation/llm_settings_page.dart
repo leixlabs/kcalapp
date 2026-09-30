@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../data/llm/llm_adapter.dart';
 import '../domain/llm_profile.dart';
@@ -36,21 +37,16 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
     final theme = Theme.of(context);
     if (_isLoading) {
       return Scaffold(
-        appBar: AppBar(title: const Text('LLM 设置')),
+        appBar: AppBar(title: const Text('设置')),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
 
-    // Layout:
-    //   index 0: "添加新配置" 卡片
-    //   index 1: "HTTP 调试面板" 卡片
-    //   index 2: 空状态提示（仅在 _profiles 为空时显示，否则 SizedBox.shrink）
-    //   index >= 3: profile 列表项
     return Scaffold(
-      appBar: AppBar(title: const Text('LLM 设置')),
+      appBar: AppBar(title: const Text('设置')),
       body: ListView.builder(
         padding: const EdgeInsets.all(16),
-        itemCount: _profiles.length + 3,
+        itemCount: _profiles.length + 4,
         itemBuilder: (context, index) {
           if (index == 0) {
             return Card(
@@ -78,6 +74,18 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
             );
           }
           if (index == 2) {
+            return Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: ListTile(
+                leading: const Icon(Icons.wifi_tethering),
+                title: const Text('局域网只读 API'),
+                subtitle: const Text('在本地网络中读取餐食和目标数据'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/lan-api'),
+              ),
+            );
+          }
+          if (index == 3) {
             if (_profiles.isEmpty) {
               return Padding(
                 padding: const EdgeInsets.all(32),
@@ -107,7 +115,7 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
             }
             return const SizedBox.shrink();
           }
-          final profile = _profiles[index - 3];
+          final profile = _profiles[index - 4];
           return Card(
             margin: const EdgeInsets.only(bottom: 12),
             child: ListTile(

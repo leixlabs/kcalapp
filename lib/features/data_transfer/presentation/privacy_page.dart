@@ -102,6 +102,12 @@ class PrivacyPage extends ConsumerWidget {
               '导出包含健康数据',
               '导出的文件包含饮食相关数据，请注意保管。默认不导出 API Key。',
             ),
+            _buildPrivacyItem(
+              theme,
+              Icons.wifi_tethering,
+              '局域网只读 API',
+              '仅手动启动时向持有临时令牌的局域网设备提供餐食和目标数据；不包含图片路径、LLM 配置或 API Key。HTTP 未加密，请只在可信局域网使用。',
+            ),
           ],
         ),
       ),
