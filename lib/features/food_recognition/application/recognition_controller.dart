@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +7,7 @@ import '../../../app/providers.dart';
 import '../../../data/llm/llm_adapter.dart';
 import '../../../platform/camera/camera_gateway.dart';
 import '../../diary/application/diary_providers.dart';
+import '../../diary/application/meal_review_controller.dart';
 import '../../diary/domain/meal.dart';
 import '../../diary/domain/meal_type.dart';
 
@@ -64,6 +66,7 @@ class RecognitionController {
         result: result,
       );
       _invalidateDiary();
+      unawaited(_ref.read(mealReviewControllerProvider).refreshForMeal(mealId));
     } catch (_) {
       await mealRepository.updateAiRecognition(
         mealId,

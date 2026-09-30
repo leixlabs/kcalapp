@@ -96,6 +96,12 @@ enum Vitamin {
   String get unit => isUg ? 'μg' : 'mg';
 }
 
+/// 默认识别及展示的核心微量营养素。
+///
+/// 图片识别无法可靠估算完整营养成分表；仅保留能支撑日常饮食提示的少量项目。
+const coreMinerals = <Mineral>[Mineral.calcium, Mineral.iron, Mineral.sodium];
+const coreVitamins = <Vitamin>[Vitamin.a, Vitamin.c, Vitamin.d, Vitamin.b12];
+
 // ─────────────────────────────────────────────
 // MicronutrientList — 通用工具（矿物质/维生素共用）
 // ─────────────────────────────────────────────

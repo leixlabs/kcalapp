@@ -73,16 +73,22 @@ class LlmSchemaValidator {
           : FoodCategory.fromId(parsedCategoryId)?.id ??
                 FoodCategory.classify(name)?.id;
 
-      // 矿物质和维生素：LLM 返回定长数组，解析失败时为 null
+      // 新接口只返回核心微量营养素的具名字段。保留旧数组解析以兼容
+      // 已保存数据和仍使用旧 prompt 的第三方模型。
+      final micronutrients = item['micronutrients'];
       final mineralsRaw = item['minerals'];
       final vitaminsRaw = item['vitamins'];
-      final minerals = (mineralsRaw is List)
+      final minerals = micronutrients is Map
+          ? _coreMineralsFromMap(micronutrients)
+          : (mineralsRaw is List)
           ? MicronutrientList.fromLlmList(
               mineralsRaw,
               length: Mineral.values.length,
             )
           : null;
-      final vitamins = (vitaminsRaw is List)
+      final vitamins = micronutrients is Map
+          ? _coreVitaminsFromMap(micronutrients)
+          : (vitaminsRaw is List)
           ? MicronutrientList.fromLlmList(
               vitaminsRaw,
               length: Vitamin.values.length,
@@ -143,6 +149,46 @@ class LlmSchemaValidator {
       return parsed;
     }
     throw LlmSchemaException('数值类型无效: $value');
+  }
+
+  static List<double?>? _coreMineralsFromMap(Map<dynamic, dynamic> raw) {
+    final values = List<double?>.filled(Mineral.values.length, null);
+    var hasValue = false;
+    const fields = {
+      Mineral.calcium: 'calcium_mg',
+      Mineral.iron: 'iron_mg',
+      Mineral.sodium: 'sodium_mg',
+    };
+    fields.forEach((mineral, field) {
+      final value = _parseOptionalNonNegative(raw[field]);
+      values[mineral.index] = value;
+      hasValue |= value != null;
+    });
+    return hasValue ? values : null;
+  }
+
+  static List<double?>? _coreVitaminsFromMap(Map<dynamic, dynamic> raw) {
+    final values = List<double?>.filled(Vitamin.values.length, null);
+    var hasValue = false;
+    const fields = {
+      Vitamin.a: 'vitamin_a_ug',
+      Vitamin.c: 'vitamin_c_mg',
+      Vitamin.d: 'vitamin_d_ug',
+      Vitamin.b12: 'vitamin_b12_ug',
+    };
+    fields.forEach((vitamin, field) {
+      final value = _parseOptionalNonNegative(raw[field]);
+      values[vitamin.index] = value;
+      hasValue |= value != null;
+    });
+    return hasValue ? values : null;
+  }
+
+  static double? _parseOptionalNonNegative(dynamic value) {
+    if (value == null) return null;
+    final parsed = _parseDouble(value);
+    if (parsed < 0) throw LlmSchemaException('微量营养素存在负数数值');
+    return parsed;
   }
 
   static MealDraft toDraft(

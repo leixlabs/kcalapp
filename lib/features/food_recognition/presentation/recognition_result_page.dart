@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -5,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../diary/application/diary_providers.dart';
+import '../../diary/application/meal_review_controller.dart';
 import '../../diary/domain/food_item.dart';
 import '../../diary/domain/meal.dart';
 import '../../diary/domain/meal_draft.dart';
@@ -618,7 +620,7 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
       return v.toStringAsFixed(decimals);
     }
 
-    final minerals = Mineral.values
+    final minerals = coreMinerals
         .map(
           (mineral) => _MicroCell(
             symbol: mineral.symbol,
@@ -629,7 +631,7 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
         )
         .where((cell) => cell.value != '0')
         .toList();
-    final vitamins = Vitamin.values
+    final vitamins = coreVitamins
         .map(
           (vitamin) => _MicroCell(
             symbol: vitamin.label,
@@ -901,10 +903,13 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
       );
 
       final repo = ref.read(mealRepositoryProvider);
-      await repo.saveMeal(meal);
+      final mealId = await repo.saveMeal(meal);
       ref.read(recognitionDraftProvider.notifier).state = null;
       ref.invalidate(dailySummaryProvider);
       ref.invalidate(weeklyFoodCategoryProgressProvider);
+      unawaited(
+        ref.read(mealReviewControllerProvider).refreshForMeal(mealId),
+      );
       if (mounted) context.go('/');
     } catch (e) {
       if (savedPhotoPath != null) {

@@ -166,7 +166,10 @@ def test_configure_recognize_and_review_daily_detail(driver):
         "LLM connectivity validation did not reach the mock server"
     )
 
-    helpers.tap_text(driver, "保存")
+    _tap_when_visible(
+        driver,
+        (AppiumBy.IOS_PREDICATE, 'type == "XCUIElementTypeButton" AND label == "保存"'),
+    )
     helpers.wait_for(driver, helpers.by_label_contains(profile_name), timeout=20)
 
     # 2. Save the simulator photo first, then verify background recognition.
@@ -195,7 +198,7 @@ def test_configure_recognize_and_review_daily_detail(driver):
     assert helpers.exists(driver, helpers.by_label_contains("食物类别 · 本周")), (
         "Home diary does not show the weekly food-category section"
     )
-    for category in ("谷薯类", "蔬菜水果", "动物性食物", "奶+豆+坚果"):
+    for category in ("谷", "蔬菜", "水产", "坚果"):
         assert helpers.exists(driver, helpers.by_label_contains(category)), (
             f"Weekly food-category progress is missing {category!r}"
         )
@@ -269,3 +272,27 @@ def test_configure_recognize_and_review_daily_detail(driver):
     assert not helpers.exists(driver, helpers.by_label("更新")), (
         "Meal details should persist edits without a bottom update button"
     )
+
+
+def _tap_when_visible(driver, locator, timeout: float = 12, max_scrolls: int = 8) -> None:
+    """Tap a control after scrolling it into view.
+
+    The LLM form renders its action row at the bottom of a scrollable sheet.
+    The inline connectivity banner grows the content and pushes that row below
+    the fold, where it stays enabled but not displayed, so waiting for
+    clickability times out. Scroll the sheet until the control is visible.
+    """
+    deadline = time.time() + timeout
+    for _ in range(max_scrolls):
+        for element in driver.find_elements(*locator):
+            try:
+                if element.is_displayed():
+                    element.click()
+                    return
+            except Exception:
+                continue
+        if time.time() >= deadline:
+            break
+        helpers.scroll_down(driver, ratio=0.3)
+        time.sleep(0.3)
+    helpers.wait_for_clickable(driver, locator, timeout=5).click()

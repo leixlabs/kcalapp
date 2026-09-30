@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +8,7 @@ import '../../../../app/theme.dart';
 import '../../../../app/providers.dart';
 import '../../../../core/utils/format_utils.dart';
 import '../../application/diary_providers.dart';
+import '../../application/meal_review_controller.dart';
 import '../../domain/food_item.dart';
 import '../../domain/meal.dart';
 import '../../domain/meal_type.dart';
@@ -371,22 +374,35 @@ class _MealEditorPageState extends ConsumerState<MealEditorPage> {
     );
 
     final repo = ref.read(mealRepositoryProvider);
+    final previousDate = _existingMeal?.dateTime;
+    final previousType = _existingMeal?.mealType;
     try {
       if (_existingMeal != null) {
         await repo.updateMeal(meal);
       } else {
         await repo.saveMeal(meal);
       }
-      if (mounted) {
-        ref.invalidate(dailySummaryProvider);
-        ref.invalidate(weeklyFoodCategoryProgressProvider);
-        context.pop();
-      }
+      ref.invalidate(dailySummaryProvider);
+      ref.invalidate(weeklyFoodCategoryProgressProvider);
+      _refreshReviewsAfterSave(previousDate, previousType);
+      if (mounted) context.pop();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('保存失败: $e')));
       }
+    }
+  }
+
+  void _refreshReviewsAfterSave(DateTime? previousDate, MealType? previousType) {
+    final controller = ref.read(mealReviewControllerProvider);
+    final keys = <({DateTime date, MealType mealType})>{};
+    if (previousDate != null && previousType != null) {
+      keys.add((date: previousDate, mealType: previousType));
+    }
+    keys.add((date: _selectedDate, mealType: _mealType));
+    for (final key in keys) {
+      unawaited(controller.refresh(key.date, key.mealType));
     }
   }
 }

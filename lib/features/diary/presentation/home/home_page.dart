@@ -496,6 +496,11 @@ class _HomePageState extends ConsumerState<HomePage> {
                 mealType: type,
                 meals: summary.meals,
                 selectedDate: selectedDate,
+                review: ref
+                    .watch(
+                      mealReviewProvider((date: selectedDate, mealType: type)),
+                    )
+                    .valueOrNull,
                 onRetryRecognition: (meal) {
                   final photoPath = meal.photoPath;
                   if (meal.id != null && photoPath != null) {

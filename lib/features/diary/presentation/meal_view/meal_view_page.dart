@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -12,6 +13,9 @@ import '../../domain/meal.dart';
 import '../../domain/food_item.dart';
 import '../../domain/meal_type.dart';
 import '../../application/diary_providers.dart';
+import '../../domain/meal_review.dart';
+import '../../application/meal_review_controller.dart';
+import '../home/widgets/meal_review_sheet.dart';
 
 class MealViewPage extends ConsumerStatefulWidget {
   final String? mealId;
@@ -73,9 +77,18 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
 
     if (confirmed == true && mounted) {
       final repo = ref.read(mealRepositoryProvider);
+      final meal = _meal;
       await repo.softDeleteMeal(_meal!.id!);
       ref.invalidate(dailySummaryProvider);
       ref.invalidate(weeklyFoodCategoryProgressProvider);
+      if (meal != null) {
+        unawaited(
+          ref.read(mealReviewControllerProvider).refresh(
+            meal.dateTime,
+            meal.mealType,
+          ),
+        );
+      }
       if (mounted) context.pop();
     }
   }
@@ -301,7 +314,7 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  _buildNutritionReview(meal, theme),
+                  _buildMealReviewLink(meal, theme),
                   const SizedBox(height: 20),
 
                   // ── 食材列表标题 ──────────────────────────────────────
@@ -425,85 +438,119 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
     );
   }
 
-  Widget _buildNutritionReview(Meal meal, ThemeData theme) {
-    final review = meal.nutritionReview?.trim();
+  Widget _buildMealReviewLink(Meal meal, ThemeData theme) {
+    final reviewAsync = ref.watch(
+      mealReviewProvider((date: meal.dateTime, mealType: meal.mealType)),
+    );
+    final allMeals =
+        ref.watch(mealsByDateProvider(meal.dateTime)).valueOrNull ?? const [];
+    final group = allMeals.where((m) => m.mealType == meal.mealType).toList();
+    final totalKcal = group.fold<double>(
+      0,
+      (sum, m) => sum + m.totalNutrition.kcal,
+    );
+    final review = reviewAsync.valueOrNull;
+    final content = review?.content;
+
+    final String hint;
+    if (review?.status == MealReviewStatus.refreshing) {
+      final foodCount = group.fold<int>(0, (sum, m) => sum + m.foodItems.length);
+      hint = content ?? '正在根据 $foodCount 项食物更新评价…';
+    } else if (review?.status == MealReviewStatus.failed && content == null) {
+      hint = '评价生成失败，点击重新生成';
+    } else if (content != null && content.isNotEmpty) {
+      hint = content;
+    } else {
+      hint = '${meal.mealType.label}营养评价会根据全部食物生成。';
+    }
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withValues(
-          alpha: 0.45,
-        ),
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.health_and_safety_outlined,
-                size: 20,
-                color: theme.colorScheme.primary,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '营养师评价',
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => showMealReviewSheet(
+          context,
+          mealType: meal.mealType,
+          date: meal.dateTime,
+          meals: group,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.health_and_safety_outlined,
+                  size: 20,
+                  color: theme.colorScheme.primary,
                 ),
-              ),
-              const Spacer(),
-              Text(
-                'AI 生成',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.outline,
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '已计入${meal.mealType.label}（共 ${totalKcal.round()} kcal）',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            review == null || review.isEmpty ? '暂无营养师评价' : review,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: review == null || review.isEmpty
-                  ? theme.colorScheme.outline
-                  : theme.colorScheme.onSurface,
-              height: 1.4,
+              ],
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              hint,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: content != null && content.isNotEmpty
+                    ? theme.colorScheme.onSurface
+                    : theme.colorScheme.outline,
+                height: 1.4,
+              ),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '查看完整评价',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right,
+                  size: 16,
+                  color: theme.colorScheme.primary,
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildMicronutrients(Meal meal, ThemeData theme) {
-    const priority = [
-      Mineral.calcium,
-      Mineral.sodium,
-      Mineral.iron,
-      Mineral.magnesium,
-    ];
-    final minerals =
-        [
-              ...priority,
-              ...Mineral.values.where((mineral) => !priority.contains(mineral)),
-            ]
-            .where(
-              (mineral) => meal.foodItems.any(
-                (item) => item.getMineral(mineral) != null,
-              ),
-            )
-            .where(
-              (mineral) =>
-                  _sumKnownValues(
-                        meal.foodItems.map((item) => item.getMineral(mineral)),
-                      ) *
-                      meal.servings >=
-                  0.05,
-            )
-            .toList();
-    final vitamins = Vitamin.values
+    final minerals = coreMinerals
+        .where(
+          (mineral) =>
+              meal.foodItems.any((item) => item.getMineral(mineral) != null),
+        )
+        .where(
+          (mineral) =>
+              _sumKnownValues(
+                    meal.foodItems.map((item) => item.getMineral(mineral)),
+                  ) *
+                  meal.servings >=
+              0.05,
+        )
+        .toList();
+    final vitamins = coreVitamins
         .where(
           (vitamin) =>
               meal.foodItems.any((item) => item.getVitamin(vitamin) != null),
@@ -956,6 +1003,7 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
   Future<void> _updateMeal(Meal updatedMeal) {
     if (updatedMeal.id == null) return Future<void>.value();
     _saveQueue = _saveQueue.then((_) async {
+      final previous = _meal;
       final mealToSave = updatedMeal.copyWith(updatedAt: DateTime.now());
       try {
         await ref.read(mealRepositoryProvider).updateMeal(mealToSave);
@@ -963,6 +1011,7 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
         setState(() => _meal = mealToSave);
         ref.invalidate(dailySummaryProvider);
         ref.invalidate(weeklyFoodCategoryProgressProvider);
+        _refreshReviewsAfterEdit(previous, mealToSave);
       } catch (error) {
         if (mounted) {
           ScaffoldMessenger.of(context)
@@ -971,6 +1020,18 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
       }
     });
     return _saveQueue;
+  }
+
+  void _refreshReviewsAfterEdit(Meal? previous, Meal current) {
+    final controller = ref.read(mealReviewControllerProvider);
+    final keys = <({DateTime date, MealType mealType})>{};
+    if (previous != null) {
+      keys.add((date: previous.dateTime, mealType: previous.mealType));
+    }
+    keys.add((date: current.dateTime, mealType: current.mealType));
+    for (final key in keys) {
+      unawaited(controller.refresh(key.date, key.mealType));
+    }
   }
 
   String _fmtG(double v) =>

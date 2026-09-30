@@ -6,6 +6,7 @@ import 'package:alice_dio/alice_dio_adapter.dart';
 import 'package:dio/dio.dart';
 
 import '../../features/llm_settings/domain/llm_profile.dart';
+import '../../features/diary/domain/meal.dart';
 import 'llm_schema.dart';
 
 class LlmAdapter {
@@ -106,9 +107,6 @@ class LlmAdapter {
                   : '请回复"OK"',
             },
           ],
-          'max_tokens': profile.responseFormat == LlmResponseFormat.jsonSchema
-              ? 256
-              : 64,
           if (profile.responseFormat != LlmResponseFormat.none)
             'response_format': _buildResponseFormat(profile.responseFormat),
         },
@@ -185,6 +183,66 @@ class LlmAdapter {
     }
   }
 
+  /// 为同一日期、同一餐次的全部记录生成简短评价；不上传图片。
+  Future<String> reviewMeal({
+    required LlmProfile profile,
+    required String apiKey,
+    required MealTypeHint mealType,
+    required List<Meal> meals,
+  }) async {
+    final foods = meals
+        .expand((meal) => meal.foodItems)
+        .map((item) => '${item.name} ${item.weightG.round()}g')
+        .join('、');
+    final total = meals.fold<double>(
+      0,
+      (sum, meal) => sum + meal.totalNutrition.kcal,
+    );
+    final carbs = meals.fold<double>(
+      0,
+      (sum, meal) => sum + meal.totalNutrition.carbsG,
+    );
+    final protein = meals.fold<double>(
+      0,
+      (sum, meal) => sum + meal.totalNutrition.proteinG,
+    );
+    final fat = meals.fold<double>(
+      0,
+      (sum, meal) => sum + meal.totalNutrition.fatG,
+    );
+    final response = await _dio.post(
+      '${profile.baseUrl}/chat/completions',
+      options: Options(
+        headers: {
+          'Authorization': 'Bearer $apiKey',
+          'Content-Type': 'application/json',
+        },
+        sendTimeout: Duration(seconds: profile.timeoutSeconds),
+        receiveTimeout: Duration(seconds: profile.timeoutSeconds),
+      ),
+      data: {
+        'model': profile.model,
+        'messages': [
+          {
+            'role': 'user',
+            'content':
+                '''请为这一顿${mealType.label}写一条中文饮食评价。仅基于给出的食物和汇总数据，不做医疗诊断；先说整体搭配，再给一个可执行建议。控制在 55 个汉字以内，不要标题、列表或免责声明。
+食物：$foods
+总热量：${total.round()} kcal；碳水：${carbs.round()}g；蛋白质：${protein.round()}g；脂肪：${fat.round()}g''',
+          },
+        ],
+      },
+    );
+    final content = response.data['choices']?[0]?['message']?['content'];
+    if (content is! String || content.trim().isEmpty) {
+      throw const LlmConnectionFailure(
+        LlmConnectionError.invalidResponse,
+        '服务未返回餐次评价',
+      );
+    }
+    return content.trim();
+  }
+
   String _buildPrompt(
     String language,
     MealTypeHint? hint,
@@ -194,8 +252,8 @@ class LlmAdapter {
     final outputFormat = responseFormat == LlmResponseFormat.jsonSchema
         ? ''
         : '''
-- 只输出一个 JSON 对象，不要 Markdown 或额外说明，结构为：{"meal_name":"餐名","items":[{"name":"食材名","category_id":"类别ID","weight_g":0,"kcal":0,"carbs_g":0,"protein_g":0,"fat_g":0,"confidence":"low|medium|high","minerals":[11个数字],"vitamins":[13个数字]}],"overall_confidence":"low|medium|high","notes":"营养建议"}
-- 每个食材的 minerals 必须按顺序包含 11 个数值（铁、锌、铜、硒、碘、钼、铬、钴、钙、钠、镁），vitamins 必须按顺序包含 13 个数值（A、B1、B2、B3、B5、B6、B7、B9、B12、C、D、E、K）；未知值填 0''';
+- 只输出一个 JSON 对象，不要 Markdown 或额外说明，结构为：{"meal_name":"餐名","items":[{"name":"食材名","category_id":"类别ID","weight_g":0,"kcal":0,"carbs_g":0,"protein_g":0,"fat_g":0,"confidence":"low|medium|high","micronutrients":{"calcium_mg":0,"iron_mg":0,"sodium_mg":0,"vitamin_a_ug":0,"vitamin_c_mg":0,"vitamin_d_ug":0,"vitamin_b12_ug":0}}],"overall_confidence":"low|medium|high","notes":"识别说明"}
+- micronutrients 仅包含钙、铁、钠、维生素 A/C/D/B12；仅在有合理依据时填写，无法可靠估算的字段直接省略，绝不能为了补齐字段猜测或填 0''';
     return '''请分析这张餐食图片，识别其中的食物。$mealHint
 
 要求：
@@ -203,6 +261,7 @@ class LlmAdapter {
 - 为每种食材指定一个食物类别 category_id，按食材本身而不是整道菜判断：grains（谷薯类）、vegetables_fruits（蔬菜水果）、meat_eggs_seafood（动物性食物：畜禽肉、鸡蛋、水产）、dairy_beans_nuts（奶及奶制品、大豆及豆制品、坚果）；无法归入以上类别时填 other。红豆、绿豆等杂豆归入 grains。复合菜品应拆分识别可见的主要食材后分别分类
 - weight_g、kcal、carbs_g、protein_g、fat_g 均为估算值，必须为非负数
 - confidence 表示你对该食材识别和营养估算的置信度
+- 微量营养素仅返回钙、铁、钠、维生素 A/C/D/B12；不返回其他项目。无法由图片和食物常识可靠估算时省略该字段
 $outputFormat''';
   }
 
@@ -252,23 +311,42 @@ $outputFormat''';
                     'enum': ['low', 'medium', 'high'],
                     'description': '对该食材识别和营养估算的置信度',
                   },
-                  // 矿物质：11 个数字，按位对应 铁/锌/铜/硒/碘/钼/铬/钴/钙/钠/镁
-                  // 不确定时填 0，不可省略元素。
-                  'minerals': {
-                    'type': 'array',
-                    'description': '微量矿物质（mg/μg），11 个元素，顺序：铁(mg) 锌(mg) 铜(mg) 硒(μg) 碘(μg) 钼(μg) 铬(μg) 钴(μg) 钙(mg) 钠(mg) 镁(mg)，不确定时填 0',
-                    'items': {'type': 'number'},
-                    'minItems': 11,
-                    'maxItems': 11,
-                  },
-                  // 维生素：13 个数字，按位对应 A/B1/B2/B3/B5/B6/B7/B9/B12/C/D/E/K
-                  // 不确定时填 0，不可省略元素。
-                  'vitamins': {
-                    'type': 'array',
-                    'description': '维生素（mg/μg），13 个元素，顺序：VA(μg) VB1(mg) VB2(mg) VB3(mg) VB5(mg) VB6(mg) VB7(μg) VB9(μg) VB12(μg) VC(mg) VD(μg) VE(mg) VK(μg)，不确定时填 0',
-                    'items': {'type': 'number'},
-                    'minItems': 13,
-                    'maxItems': 13,
+                  'micronutrients': {
+                    'type': 'object',
+                    'description': '仅在可合理估算时给出核心微量营养素；未知值为 null，不得猜测或填 0',
+                    'properties': {
+                      'calcium_mg': {
+                        'type': ['number', 'null'],
+                      },
+                      'iron_mg': {
+                        'type': ['number', 'null'],
+                      },
+                      'sodium_mg': {
+                        'type': ['number', 'null'],
+                      },
+                      'vitamin_a_ug': {
+                        'type': ['number', 'null'],
+                      },
+                      'vitamin_c_mg': {
+                        'type': ['number', 'null'],
+                      },
+                      'vitamin_d_ug': {
+                        'type': ['number', 'null'],
+                      },
+                      'vitamin_b12_ug': {
+                        'type': ['number', 'null'],
+                      },
+                    },
+                    'required': [
+                      'calcium_mg',
+                      'iron_mg',
+                      'sodium_mg',
+                      'vitamin_a_ug',
+                      'vitamin_c_mg',
+                      'vitamin_d_ug',
+                      'vitamin_b12_ug',
+                    ],
+                    'additionalProperties': false,
                   },
                 },
                 'required': [
@@ -280,8 +358,7 @@ $outputFormat''';
                   'protein_g',
                   'fat_g',
                   'confidence',
-                  'minerals',
-                  'vitamins',
+                  'micronutrients',
                 ],
                 'additionalProperties': false,
               },

@@ -16,7 +16,7 @@ class AppDatabase {
     final path = p.join(dir.path, 'calory.db');
     return openDatabase(
       path,
-      version: 8,
+      version: 9,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
       onConfigure: (db) async {
@@ -95,6 +95,8 @@ class AppDatabase {
       )
     ''');
 
+    await _createMealReviewsTable(db);
+
     await db.execute('CREATE INDEX idx_meals_date ON meals(date_time)');
     await db.execute('CREATE INDEX idx_meals_type ON meals(meal_type)');
     await db.execute('CREATE INDEX idx_food_items_meal ON food_items(meal_id)');
@@ -139,6 +141,22 @@ class AppDatabase {
         "ALTER TABLE meals ADD COLUMN ai_recognition_status TEXT NOT NULL DEFAULT 'none'",
       );
     }
+    if (oldVersion < 9) {
+      await _createMealReviewsTable(db);
+    }
+  }
+
+  Future<void> _createMealReviewsTable(DatabaseExecutor db) async {
+    await db.execute('''
+      CREATE TABLE meal_reviews (
+        date TEXT NOT NULL,
+        meal_type TEXT NOT NULL,
+        content TEXT,
+        status TEXT NOT NULL DEFAULT 'idle',
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        PRIMARY KEY (date, meal_type)
+      )
+    ''');
   }
 
   Future<void> close() async {

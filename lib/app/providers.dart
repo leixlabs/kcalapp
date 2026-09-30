@@ -1,8 +1,10 @@
 import 'package:alice/alice.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../data/database/database.dart';
 import '../features/diary/data/meal_dao.dart';
 import '../features/diary/data/meal_repository.dart';
+import '../features/diary/data/meal_review_dao.dart';
 import '../features/diary/data/goal_dao.dart';
 import '../features/diary/data/goal_repository.dart';
 import '../features/llm_settings/data/llm_profile_dao.dart';
@@ -42,6 +44,10 @@ final llmProfileDaoProvider = Provider<LlmProfileDao>((ref) {
 
 final mealRepositoryProvider = Provider<MealRepository>((ref) {
   return MealRepository(ref.watch(mealDaoProvider));
+});
+
+final mealReviewDaoProvider = Provider<MealReviewDao>((ref) {
+  return MealReviewDao(ref.watch(databaseProvider));
 });
 
 final goalRepositoryProvider = Provider<GoalRepository>((ref) {

@@ -4,6 +4,8 @@ import '../../../app/providers.dart';
 import 'daily_summary.dart';
 import '../domain/meal.dart';
 import '../domain/food_category.dart';
+import '../domain/meal_review.dart';
+import '../domain/meal_type.dart';
 
 final selectedDateProvider = StateProvider<DateTime>((ref) => DateTime.now());
 
@@ -47,4 +49,12 @@ final weeklyFoodCategoryProgressProvider =
       final mealRepo = ref.watch(mealRepositoryProvider);
       final meals = await mealRepo.getMealsBetween(monday, nextMonday);
       return aggregateWeeklyFoodCategories(meals);
+    });
+
+final mealReviewProvider =
+    FutureProvider.family<MealReview?, ({DateTime date, MealType mealType})>((
+      ref,
+      key,
+    ) {
+      return ref.watch(mealReviewDaoProvider).get(key.date, key.mealType);
     });

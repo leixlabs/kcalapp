@@ -5,13 +5,16 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../domain/meal.dart';
+import '../../../domain/meal_review.dart';
 import '../../../domain/meal_type.dart';
+import 'meal_review_sheet.dart';
 
 class MealSection extends StatelessWidget {
   final MealType mealType;
   final List<Meal> meals;
   final DateTime selectedDate;
   final ValueChanged<Meal>? onRetryRecognition;
+  final MealReview? review;
 
   const MealSection({
     super.key,
@@ -19,6 +22,7 @@ class MealSection extends StatelessWidget {
     required this.meals,
     required this.selectedDate,
     this.onRetryRecognition,
+    this.review,
   });
 
   @override
@@ -97,11 +101,105 @@ class MealSection extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
+            _MealReviewSummary(
+              review: review,
+              mealType: mealType,
+              date: selectedDate,
+              meals: typeMeals,
+            ),
             // ── 每条记录 ────────────────────────────────────────────────
             ...typeMeals.map(
               (meal) =>
                   _MealItem(meal: meal, onRetryRecognition: onRetryRecognition),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MealReviewSummary extends StatelessWidget {
+  final MealReview? review;
+  final MealType mealType;
+  final DateTime date;
+  final List<Meal> meals;
+
+  const _MealReviewSummary({
+    this.review,
+    required this.mealType,
+    required this.date,
+    required this.meals,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final status = review?.status;
+    final content = review?.content;
+    final isRefreshing = status == MealReviewStatus.refreshing;
+    final isFailed = status == MealReviewStatus.failed;
+    final foodCount = meals.fold<int>(0, (sum, m) => sum + m.foodItems.length);
+
+    if (content == null && !isRefreshing && !isFailed) {
+      return const SizedBox.shrink();
+    }
+
+    final String text;
+    if (isRefreshing) {
+      text = content ?? '正在根据 $foodCount 项食物更新评价…';
+    } else if (isFailed) {
+      text = content ?? '评价生成失败，点击重新生成';
+    } else {
+      text = content!;
+    }
+
+    return InkWell(
+      onTap: () => showMealReviewSheet(
+        context,
+        mealType: mealType,
+        date: date,
+        meals: meals,
+      ),
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.primaryContainer.withValues(alpha: 0.45),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.auto_awesome, size: 16, color: theme.colorScheme.primary),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                text,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall?.copyWith(height: 1.35),
+              ),
+            ),
+            if (isRefreshing) ...[
+              const SizedBox(width: 6),
+              Text(
+                '更新中',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.outline,
+                ),
+              ),
+            ] else if (status == MealReviewStatus.completed) ...[
+              const SizedBox(width: 6),
+              Text(
+                '基于 $foodCount 项',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.outline,
+                ),
+              ),
+            ],
           ],
         ),
       ),

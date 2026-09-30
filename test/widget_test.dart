@@ -455,6 +455,32 @@ void main() {
   });
 
   group('Micronutrients', () {
+    test('recognition schema accepts only named core micronutrients', () {
+      final result = LlmSchemaValidator.parse(
+        jsonEncode({
+          'meal_name': '早餐',
+          'items': [
+            {
+              'name': '牛奶',
+              'category_id': 'dairy_beans_nuts',
+              'weight_g': 250,
+              'kcal': 120,
+              'carbs_g': 12,
+              'protein_g': 8,
+              'fat_g': 4,
+              'micronutrients': {'calcium_mg': 260, 'vitamin_b12_ug': 1.1},
+            },
+          ],
+        }),
+      );
+
+      final item = result.foodItems.single;
+      expect(item.getMineral(Mineral.calcium), 260);
+      expect(item.getVitamin(Vitamin.b12), 1.1);
+      expect(item.getMineral(Mineral.iron), isNull);
+      expect(item.getVitamin(Vitamin.c), isNull);
+    });
+
     test('mineral enum includes calcium, sodium, and magnesium', () {
       expect(Mineral.calcium.label, '钙');
       expect(Mineral.sodium.label, '钠');
