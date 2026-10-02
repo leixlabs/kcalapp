@@ -911,8 +911,7 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
       final mealId = await repo.saveMeal(meal);
       ref.read(recognitionDraftProvider.notifier).state = null;
       ref.invalidate(dailySummaryProvider);
-      ref.invalidate(weeklyFoodCategoryProgressProvider);
-      ref.invalidate(weeklyKcalProvider);
+      ref.invalidate(weeklyMealsProvider);
       unawaited(ref.read(mealReviewControllerProvider).refreshForMeal(mealId));
       if (mounted) context.go('/');
     } catch (e) {

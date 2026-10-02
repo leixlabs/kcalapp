@@ -226,51 +226,66 @@ class _HomePageState extends ConsumerState<HomePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 第一行：目标 kcal + 修改目标按钮
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.local_fire_department,
-                        color: theme.colorScheme.error,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        hasGoal
-                            ? '目标  ${summary.target!.kcal.round()} kcal'
-                            : '未设置目标',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
+                  Text(
+                    '今日热量',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                  GestureDetector(
+                  InkWell(
                     onTap: () => context.push('/goals'),
-                    child: Row(
-                      children: [
-                        Text(
-                          '修改目标',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.outline,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 7,
+                      ),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primaryContainer.withValues(
+                          alpha: 0.55,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            hasGoal
+                                ? '目标 ${summary.target!.kcal.round()}'
+                                : '设置目标',
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              color: theme.colorScheme.onPrimaryContainer,
+                              fontWeight: FontWeight.w700,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 2),
-                        Icon(
-                          Icons.edit_outlined,
-                          size: 14,
-                          color: theme.colorScheme.outline,
-                        ),
-                      ],
+                          if (hasGoal) ...[
+                            const SizedBox(width: 3),
+                            Text(
+                              'kcal',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.onPrimaryContainer,
+                              ),
+                            ),
+                          ],
+                          const SizedBox(width: 4),
+                          Icon(
+                            Icons.edit_outlined,
+                            size: 14,
+                            color: theme.colorScheme.onPrimaryContainer,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              // 半环居中
+              const SizedBox(height: 8),
               Center(
                 child: CalorieRing(
                   consumed: summary.consumed.kcal,
@@ -400,6 +415,29 @@ class _HomePageState extends ConsumerState<HomePage> {
               ],
             ),
           ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: () =>
+                  context.push('/weekly-summary', extra: selectedDate),
+              style: TextButton.styleFrom(
+                minimumSize: const Size(44, 44),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('本周总结'),
+                  const SizedBox(width: 4),
+                  Icon(
+                    Icons.arrow_forward,
+                    size: 16,
+                    color: theme.colorScheme.primary,
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -417,64 +455,84 @@ class _HomePageState extends ConsumerState<HomePage> {
     final hasTarget = target != null && target > 0;
     final progress = hasTarget ? (consumed / target).clamp(0.0, 1.0) : 0.0;
     return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 14, color: theme.colorScheme.outline),
-              const SizedBox(width: 5),
-              Expanded(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.outline,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          RichText(
-            text: TextSpan(
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                TextSpan(
-                  text: FormatUtils.formatGramValue(consumed),
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: theme.colorScheme.onSurface,
+                Icon(icon, size: 13, color: theme.colorScheme.outline),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.outline,
+                    ),
                   ),
                 ),
-                if (hasTarget)
-                  TextSpan(
-                    text: ' / ${FormatUtils.formatGramValue(target)}g',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.outline,
-                    ),
-                  )
-                else
-                  TextSpan(
-                    text: 'g',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.outline,
-                    ),
-                  ),
               ],
             ),
-          ),
-          const SizedBox(height: 6),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: hasTarget ? progress : null,
-              minHeight: 5,
-              backgroundColor: theme.colorScheme.surfaceContainerHighest,
-              valueColor: AlwaysStoppedAnimation(color),
+            const SizedBox(height: 7),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      FormatUtils.formatGramValue(consumed),
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: color,
+                        fontWeight: FontWeight.w800,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 3),
+                Text(
+                  'g',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.outline,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
+            const SizedBox(height: 2),
+            Text(
+              hasTarget
+                  ? '目标 ${FormatUtils.formatGramValue(target)} g'
+                  : '未设目标',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.outline,
+                fontSize: 10,
+              ),
+            ),
+            const SizedBox(height: 7),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: hasTarget ? progress : 0,
+                minHeight: 4,
+                backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                valueColor: AlwaysStoppedAnimation(color),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -585,8 +643,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
           );
       ref.invalidate(dailySummaryProvider);
-      ref.invalidate(weeklyFoodCategoryProgressProvider);
-      ref.invalidate(weeklyKcalProvider);
+      ref.invalidate(weeklyMealsProvider);
       unawaited(
         _processRecognition(
           messenger,

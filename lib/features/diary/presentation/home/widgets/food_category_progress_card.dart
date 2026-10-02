@@ -47,6 +47,7 @@ class _CategoryProgressRow extends StatelessWidget {
     final theme = Theme.of(context);
     final target = category.weeklyReferenceGrams;
     final progress = (grams / target).clamp(0.0, 1.0);
+    final color = _categoryColor(category, theme);
 
     return Column(
       children: [
@@ -60,11 +61,25 @@ class _CategoryProgressRow extends StatelessWidget {
                 ),
               ),
             ),
-            Text(
-              '${grams.round()} / ${target.round()} g',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.outline,
-                fontFeatures: const [FontFeature.tabularFigures()],
+            Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: '${grams.round()}',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: color,
+                      fontWeight: FontWeight.w800,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                  TextSpan(
+                    text: ' / ${target.round()} g',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: theme.colorScheme.outline,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -76,7 +91,7 @@ class _CategoryProgressRow extends StatelessWidget {
             value: progress,
             minHeight: 7,
             backgroundColor: theme.colorScheme.surfaceContainerHighest,
-            valueColor: AlwaysStoppedAnimation(_categoryColor(category, theme)),
+            valueColor: AlwaysStoppedAnimation(color),
           ),
         ),
       ],

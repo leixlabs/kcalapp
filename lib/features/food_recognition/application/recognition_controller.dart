@@ -87,8 +87,7 @@ class RecognitionController {
 
   void _invalidateDiary() {
     _ref.invalidate(dailySummaryProvider);
-    _ref.invalidate(weeklyFoodCategoryProgressProvider);
-    _ref.invalidate(weeklyKcalProvider);
+    _ref.invalidate(weeklyMealsProvider);
   }
 
   MealTypeHint? _toHint(MealType? type) {

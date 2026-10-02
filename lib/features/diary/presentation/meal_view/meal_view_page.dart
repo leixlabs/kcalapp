@@ -80,8 +80,7 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
       final meal = _meal;
       await repo.softDeleteMeal(_meal!.id!);
       ref.invalidate(dailySummaryProvider);
-      ref.invalidate(weeklyFoodCategoryProgressProvider);
-      ref.invalidate(weeklyKcalProvider);
+      ref.invalidate(weeklyMealsProvider);
       if (meal != null) {
         unawaited(
           ref
@@ -1011,8 +1010,7 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
         if (!mounted) return;
         setState(() => _meal = mealToSave);
         ref.invalidate(dailySummaryProvider);
-        ref.invalidate(weeklyFoodCategoryProgressProvider);
-        ref.invalidate(weeklyKcalProvider);
+        ref.invalidate(weeklyMealsProvider);
         _refreshReviewsAfterEdit(previous, mealToSave);
       } catch (error) {
         if (mounted) {

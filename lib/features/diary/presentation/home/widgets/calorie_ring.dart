@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 class CalorieRing extends StatelessWidget {
@@ -16,13 +17,15 @@ class CalorieRing extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final progress = (target != null && target! > 0) ? (consumed / target!).clamp(0.0, 1.0) : 0.0;
+    final progress = (target != null && target! > 0)
+        ? (consumed / target!).clamp(0.0, 1.0)
+        : 0.0;
     final isOver = target != null && consumed > target!;
 
-    // 半环：宽度 160，高度只需约 100（只显示上半圆弧部分）
+    // Keep the main calorie value visually dominant inside the half-ring.
     return SizedBox(
-      width: 160,
-      height: 100,
+      width: 176,
+      height: 112,
       child: Stack(
         alignment: Alignment.topCenter,
         children: [
@@ -31,33 +34,47 @@ class CalorieRing extends StatelessWidget {
             painter: _HalfRingPainter(
               progress: progress,
               trackColor: theme.colorScheme.surfaceContainerHighest,
-              progressColor: isOver ? theme.colorScheme.error : theme.colorScheme.primary,
+              progressColor: isOver
+                  ? theme.colorScheme.error
+                  : theme.colorScheme.primary,
             ),
           ),
           // 文字居中显示在半环底部
           Positioned(
-            bottom: 0,
+            bottom: 2,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  '食物摄入',
-                  style: theme.textTheme.bodySmall?.copyWith(
+                  '已摄入',
+                  style: theme.textTheme.labelSmall?.copyWith(
                     color: theme.colorScheme.outline,
                   ),
                 ),
-                Text(
-                  consumed.round().toString(),
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: isOver ? theme.colorScheme.error : theme.colorScheme.onSurface,
-                  ),
-                ),
-                Text(
-                  'kcal',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.outline,
-                  ),
+                const SizedBox(height: 1),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Text(
+                      consumed.round().toString(),
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                        color: isOver
+                            ? theme.colorScheme.error
+                            : theme.colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'kcal',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: theme.colorScheme.outline,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -85,8 +102,8 @@ class _HalfRingPainter extends CustomPainter {
     final radius = size.width / 2 - 10;
 
     // 半环从左侧 180° 到右侧 0°（即从 π 到 0，即上半部分）
-    const startAngle = math.pi;       // 从左侧开始
-    const sweepTotal = math.pi;       // 扫过 180°（上半圆）
+    const startAngle = math.pi; // 从左侧开始
+    const sweepTotal = math.pi; // 扫过 180°（上半圆）
 
     final trackPaint = Paint()
       ..color = trackColor

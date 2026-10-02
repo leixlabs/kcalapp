@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/providers.dart';
 import 'daily_summary.dart';
+import 'weekly_summary.dart';
 import '../domain/meal.dart';
 import '../domain/food_category.dart';
 import '../domain/meal_review.dart';
@@ -35,19 +36,23 @@ final monthlyMealsProvider =
       return aggregateDailyKcal(meals);
     });
 
+final weeklyMealsProvider = FutureProvider.family<List<Meal>, DateTime>((
+  ref,
+  selectedDate,
+) {
+  final weekStart = weekStartFor(selectedDate);
+  final nextMonday = weekStart.add(const Duration(days: 7));
+  return ref
+      .watch(mealRepositoryProvider)
+      .getMealsBetween(weekStart, nextMonday);
+});
+
 final weeklyFoodCategoryProgressProvider =
     FutureProvider.family<Map<FoodCategory, double>, DateTime>((
       ref,
       selectedDate,
     ) async {
-      final monday = DateTime(
-        selectedDate.year,
-        selectedDate.month,
-        selectedDate.day,
-      ).subtract(Duration(days: selectedDate.weekday - 1));
-      final nextMonday = monday.add(const Duration(days: 7));
-      final mealRepo = ref.watch(mealRepositoryProvider);
-      final meals = await mealRepo.getMealsBetween(monday, nextMonday);
+      final meals = await ref.watch(weeklyMealsProvider(selectedDate).future);
       return aggregateWeeklyFoodCategories(meals);
     });
 
@@ -57,14 +62,7 @@ final weeklyKcalProvider =
       ref,
       selectedDate,
     ) async {
-      final monday = DateTime(
-        selectedDate.year,
-        selectedDate.month,
-        selectedDate.day,
-      ).subtract(Duration(days: selectedDate.weekday - 1));
-      final nextMonday = monday.add(const Duration(days: 7));
-      final mealRepo = ref.watch(mealRepositoryProvider);
-      final meals = await mealRepo.getMealsBetween(monday, nextMonday);
+      final meals = await ref.watch(weeklyMealsProvider(selectedDate).future);
       return aggregateDailyKcal(meals);
     });
 
