@@ -436,7 +436,7 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
 
   Widget _buildMealReviewLink(Meal meal, ThemeData theme) {
     final reviewAsync = ref.watch(
-      mealReviewProvider((date: meal.dateTime, mealType: meal.mealType)),
+      mealReviewProvider(mealReviewKey(meal.dateTime, meal.mealType)),
     );
     final allMeals =
         ref.watch(mealsByDateProvider(meal.dateTime)).valueOrNull ?? const [];

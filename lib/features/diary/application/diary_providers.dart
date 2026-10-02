@@ -68,10 +68,17 @@ final weeklyKcalProvider =
       return aggregateDailyKcal(meals);
     });
 
-final mealReviewProvider =
-    FutureProvider.family<MealReview?, ({DateTime date, MealType mealType})>((
-      ref,
-      key,
-    ) {
-      return ref.watch(mealReviewDaoProvider).get(key.date, key.mealType);
-    });
+/// 评价按「日期 + 餐次」归类。key 统一归一化到当天零点，避免同一餐次因
+/// 传入的 `DateTime` 携带时分秒不同而生成多个缓存实例，导致失效通知打不中
+/// 正在被 UI 监听的实例。
+typedef MealReviewKey = ({DateTime date, MealType mealType});
+
+MealReviewKey mealReviewKey(DateTime date, MealType mealType) =>
+    (date: DateTime(date.year, date.month, date.day), mealType: mealType);
+
+final mealReviewProvider = FutureProvider.family<MealReview?, MealReviewKey>((
+  ref,
+  key,
+) {
+  return ref.watch(mealReviewDaoProvider).get(key.date, key.mealType);
+});

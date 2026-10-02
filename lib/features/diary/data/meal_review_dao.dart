@@ -44,4 +44,17 @@ class MealReviewDao {
 
   String _day(DateTime date) =>
       DateTime(date.year, date.month, date.day).toIso8601String();
+
+  /// 应用启动时将上次被中断（进程被杀）的「刷新中」评价标记为失败，
+  /// 否则首页会一直停在「更新中」。评价内容保留，用户可手动重新生成。
+  Future<void> markInterruptedRefreshesFailed() async {
+    await db.rawUpdate(
+      'UPDATE meal_reviews SET status = ?, updated_at = ? WHERE status = ?',
+      [
+        MealReviewStatus.failed.name,
+        DateTime.now().toIso8601String(),
+        MealReviewStatus.refreshing.name,
+      ],
+    );
+  }
 }

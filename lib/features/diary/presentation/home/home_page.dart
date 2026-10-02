@@ -500,7 +500,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 selectedDate: selectedDate,
                 review: ref
                     .watch(
-                      mealReviewProvider((date: selectedDate, mealType: type)),
+                      mealReviewProvider(mealReviewKey(selectedDate, type)),
                     )
                     .valueOrNull,
                 onRetryRecognition: (meal) {

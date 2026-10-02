@@ -74,6 +74,69 @@ void main() {
     dio.close(force: true);
   });
 
+  test(
+    'identifies requests as kcalapp instead of the default Dart agent',
+    () async {
+      RequestOptions? request;
+      final dio = _respondWith(
+        '{"meal_name":"连通性测试","items":[],"overall_confidence":"high","notes":"验证成功"}',
+        onRequest: (options) => request = options,
+      );
+      final adapter = LlmAdapter(dio: dio);
+
+      expect(
+        await adapter.testConnection(profile: _profile(), apiKey: 'test-key'),
+        isTrue,
+      );
+      final userAgent = request!.headers[HttpHeaders.userAgentHeader] as String;
+      expect(userAgent, startsWith('kcalapp/'));
+      expect(userAgent, contains('('));
+      expect(userAgent, isNot(contains('dart:io')));
+
+      dio.close(force: true);
+    },
+  );
+
+  test('sends the provided user agent verbatim', () async {
+    RequestOptions? request;
+    final dio = _respondWith(
+      '{"meal_name":"连通性测试","items":[],"overall_confidence":"high","notes":"验证成功"}',
+      onRequest: (options) => request = options,
+    );
+    final adapter = LlmAdapter(
+      dio: dio,
+      userAgent: 'kcalapp/1.2.3+4 (Android 14)',
+    );
+
+    expect(
+      await adapter.testConnection(profile: _profile(), apiKey: 'test-key'),
+      isTrue,
+    );
+    expect(
+      request!.headers[HttpHeaders.userAgentHeader],
+      'kcalapp/1.2.3+4 (Android 14)',
+    );
+
+    dio.close(force: true);
+  });
+
+  test('does not override an explicitly configured user agent', () async {
+    RequestOptions? request;
+    final dio = _respondWith(
+      '{"meal_name":"连通性测试","items":[],"overall_confidence":"high","notes":"验证成功"}',
+      onRequest: (options) => request = options,
+    )..options.headers[HttpHeaders.userAgentHeader] = 'custom-agent';
+    final adapter = LlmAdapter(dio: dio);
+
+    expect(
+      await adapter.testConnection(profile: _profile(), apiKey: 'test-key'),
+      isTrue,
+    );
+    expect(request!.headers[HttpHeaders.userAgentHeader], 'custom-agent');
+
+    dio.close(force: true);
+  });
+
   test('uses JSON Mode response_format when selected', () async {
     RequestOptions? request;
     final dio = _respondWith(

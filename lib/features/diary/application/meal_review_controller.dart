@@ -22,6 +22,7 @@ class MealReviewController {
   Future<void> refresh(DateTime date, MealType mealType) async {
     final dao = _ref.read(mealReviewDaoProvider);
     final existing = await dao.get(date, mealType);
+    final key = mealReviewKey(date, mealType);
 
     await dao.upsert(
       MealReview(
@@ -32,7 +33,7 @@ class MealReviewController {
         updatedAt: DateTime.now(),
       ),
     );
-    _ref.invalidate(mealReviewProvider((date: date, mealType: mealType)));
+    _ref.invalidate(mealReviewProvider(key));
 
     try {
       final profile = await _ref.read(llmProfileDaoProvider).getActive();
@@ -43,7 +44,9 @@ class MealReviewController {
         throw const MealReviewGenerationException('请先在设置中配置 LLM 服务');
       }
 
-      final meals = await _ref.read(mealRepositoryProvider).getMealsByDate(date);
+      final meals = await _ref
+          .read(mealRepositoryProvider)
+          .getMealsByDate(date);
       final group = meals
           .where((m) => m.mealType == mealType && m.foodItems.isNotEmpty)
           .toList();
@@ -61,12 +64,14 @@ class MealReviewController {
         return;
       }
 
-      final content = await _ref.read(llmAdapterProvider).reviewMeal(
-        profile: profile,
-        apiKey: apiKey,
-        mealType: _toHint(mealType),
-        meals: group,
-      );
+      final content = await _ref
+          .read(llmAdapterProvider)
+          .reviewMeal(
+            profile: profile,
+            apiKey: apiKey,
+            mealType: _toHint(mealType),
+            meals: group,
+          );
       await dao.upsert(
         MealReview(
           date: date,
@@ -87,7 +92,7 @@ class MealReviewController {
         ),
       );
     } finally {
-      _ref.invalidate(mealReviewProvider((date: date, mealType: mealType)));
+      _ref.invalidate(mealReviewProvider(key));
     }
   }
 

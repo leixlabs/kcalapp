@@ -14,6 +14,7 @@ import '../platform/camera/camera_gateway.dart';
 import '../platform/camera/camera_gateway_impl.dart';
 import '../data/image/image_processor.dart';
 import '../data/llm/llm_adapter.dart';
+import '../core/utils/app_user_agent.dart';
 
 final aliceProvider = Provider<Alice>((ref) {
   return Alice(
@@ -71,5 +72,11 @@ final imageProcessorProvider = Provider<ImageProcessor>((ref) {
 });
 
 final llmAdapterProvider = Provider<LlmAdapter>((ref) {
-  return LlmAdapter(alice: ref.watch(aliceProvider));
+  return LlmAdapter(
+    alice: ref.watch(aliceProvider),
+    userAgent: ref.watch(userAgentProvider),
+  );
 });
+
+/// 出站请求的 `User-Agent`；`main()` 会用真实包版本覆盖它。
+final userAgentProvider = Provider<String>((ref) => AppUserAgent.current());

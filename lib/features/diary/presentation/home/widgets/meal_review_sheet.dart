@@ -18,7 +18,8 @@ Future<void> showMealReviewSheet(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
-    builder: (_) => MealReviewSheet(mealType: mealType, date: date, meals: meals),
+    builder: (_) =>
+        MealReviewSheet(mealType: mealType, date: date, meals: meals),
   );
 }
 
@@ -38,13 +39,10 @@ class MealReviewSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final reviewAsync = ref.watch(
-      mealReviewProvider((date: date, mealType: mealType)),
+      mealReviewProvider(mealReviewKey(date, mealType)),
     );
     final review = reviewAsync.valueOrNull;
-    final foodCount = meals.fold<int>(
-      0,
-      (sum, m) => sum + m.foodItems.length,
-    );
+    final foodCount = meals.fold<int>(0, (sum, m) => sum + m.foodItems.length);
     final totalKcal = meals.fold<double>(
       0,
       (sum, m) => sum + m.totalNutrition.kcal,
@@ -184,10 +182,7 @@ class MealReviewSheet extends ConsumerWidget {
             child: Row(
               children: [
                 Expanded(
-                  child: Text(
-                    item.name,
-                    style: theme.textTheme.bodyMedium,
-                  ),
+                  child: Text(item.name, style: theme.textTheme.bodyMedium),
                 ),
                 Text(
                   '${item.weightG.round()}g · ${item.kcal.round()} kcal',

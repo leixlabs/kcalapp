@@ -5,6 +5,7 @@ import 'package:alice/alice.dart';
 import 'package:alice_dio/alice_dio_adapter.dart';
 import 'package:dio/dio.dart';
 
+import '../../core/utils/app_user_agent.dart';
 import '../../features/llm_settings/domain/llm_profile.dart';
 import '../../features/diary/domain/meal.dart';
 import 'llm_schema.dart';
@@ -12,7 +13,14 @@ import 'llm_schema.dart';
 class LlmAdapter {
   final Dio _dio;
 
-  LlmAdapter({Alice? alice, Dio? dio}) : _dio = dio ?? Dio() {
+  LlmAdapter({Alice? alice, Dio? dio, String? userAgent})
+    : _dio = dio ?? Dio() {
+    // dart:io 的 HttpClient 默认发送 `Dart/<version> (dart:io)`，这里统一
+    // 标识为 App 自身；若调用方已显式配置 User-Agent 则不覆盖。
+    _dio.options.headers.putIfAbsent(
+      HttpHeaders.userAgentHeader,
+      () => userAgent ?? AppUserAgent.current(),
+    );
     if (alice != null) {
       final adapter = AliceDioAdapter();
       alice.addAdapter(adapter);
