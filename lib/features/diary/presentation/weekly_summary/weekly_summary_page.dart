@@ -9,6 +9,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../application/diary_providers.dart';
 import '../../application/weekly_review_controller.dart';
 import '../../application/weekly_summary.dart';
+import '../../domain/daily_goal.dart';
 import '../../domain/meal.dart';
 import '../../domain/weekly_narrative.dart';
 import '../../../../core/widgets/meal_photo.dart';
@@ -50,6 +51,9 @@ class _WeeklySummaryPageState extends ConsumerState<WeeklySummaryPage> {
         .watch(weeklyReviewProvider(widget.selectedDate))
         .valueOrNull;
     final hasStoredReview = stored?.happened?.isNotEmpty ?? false;
+    final dailyKcalGoal =
+        ref.watch(weeklyKcalGoalProvider(widget.selectedDate)).valueOrNull ??
+        DailyGoal.recommendedKcal;
 
     return Scaffold(
       appBar: AppBar(
@@ -93,6 +97,7 @@ class _WeeklySummaryPageState extends ConsumerState<WeeklySummaryPage> {
                   periodEnd: periodEnd,
                   happened: happened,
                   improvement: improvement,
+                  dailyKcalGoal: dailyKcalGoal,
                 ),
               ),
             ],
@@ -188,7 +193,7 @@ class _WeeklySummaryPageState extends ConsumerState<WeeklySummaryPage> {
       try {
         await precacheImage(provider, context);
       } catch (_) {
-        // 单张照片预热失败不阻塞导出，卡片内会展示占位图。
+        // 单张照片预热失败不阻塞导出；对应格子留空，不再使用占位图。
       }
     }
   }

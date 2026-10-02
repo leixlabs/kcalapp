@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/providers.dart';
 import 'daily_summary.dart';
 import 'weekly_summary.dart';
+import '../domain/daily_goal.dart';
 import '../domain/meal.dart';
 import '../domain/food_category.dart';
 import '../domain/meal_review.dart';
@@ -56,6 +57,18 @@ final weeklyFoodCategoryProgressProvider =
       final meals = await ref.watch(weeklyMealsProvider(selectedDate).future);
       return aggregateWeeklyFoodCategories(meals);
     });
+
+/// 所选周生效的每日热量目标（没有自定义目标时使用推荐值），
+/// 用于周回顾热力图的达成度配色。
+final weeklyKcalGoalProvider = FutureProvider.family<double, DateTime>((
+  ref,
+  selectedDate,
+) async {
+  final goal = await ref
+      .watch(goalRepositoryProvider)
+      .getGoalForDate(weekStartFor(selectedDate));
+  return goal?.kcal ?? DailyGoal.recommendedKcal;
+});
 
 /// 本周每日总热量，用于首页周日期条。
 final weeklyKcalProvider =
