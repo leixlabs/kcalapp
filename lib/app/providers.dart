@@ -13,6 +13,8 @@ import '../platform/secure_store/secure_store_gateway.dart';
 import '../platform/secure_store/secure_store_impl.dart';
 import '../platform/camera/camera_gateway.dart';
 import '../platform/camera/camera_gateway_impl.dart';
+import '../platform/photo_library/photo_library_gateway.dart';
+import '../platform/photo_library/photo_library_gateway_impl.dart';
 import '../data/image/image_processor.dart';
 import '../data/llm/llm_adapter.dart';
 import '../core/utils/app_user_agent.dart';
@@ -70,6 +72,10 @@ final cameraGatewayProvider = Provider<CameraGateway>((ref) {
 
 final mediaPickerGatewayProvider = Provider<MediaPickerGateway>((ref) {
   return MediaPickerImpl();
+});
+
+final photoLibraryGatewayProvider = Provider<PhotoLibraryGateway>((ref) {
+  return PhotoLibraryGatewayImpl();
 });
 
 final imageProcessorProvider = Provider<ImageProcessor>((ref) {

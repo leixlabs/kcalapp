@@ -29,7 +29,8 @@ class RecognitionController {
 
   Future<void> recognizeSavedMeal(
     int mealId, {
-    required String photoPath,
+    String? photoAssetId,
+    String? photoPath,
     required MealType mealType,
   }) async {
     final imageProcessor = _ref.read(imageProcessorProvider);
@@ -44,6 +45,14 @@ class RecognitionController {
       );
       _invalidateDiary();
 
+      final sourcePath = await _resolveSourcePath(
+        photoAssetId: photoAssetId,
+        photoPath: photoPath,
+      );
+      if (sourcePath == null) {
+        throw RecognitionFailedException('找不到照片，无法识别');
+      }
+
       final profile = await _ref.read(llmProfileDaoProvider).getActive();
       if (profile == null) {
         throw RecognitionFailedException('请先在设置中配置 LLM 服务');
@@ -53,7 +62,9 @@ class RecognitionController {
         throw RecognitionFailedException('请先在设置中配置 API Key');
       }
 
-      processedImage = await imageProcessor.processImage(sourcePath: photoPath);
+      processedImage = await imageProcessor.processImage(
+        sourcePath: sourcePath,
+      );
       final result = await llmAdapter.recognizeFood(
         profile: profile,
         apiKey: apiKey,
@@ -88,6 +99,21 @@ class RecognitionController {
   void _invalidateDiary() {
     _ref.invalidate(dailySummaryProvider);
     _ref.invalidate(weeklyMealsProvider);
+  }
+
+  /// 优先从系统相册资源解析文件，其次回退到沙盒路径。
+  Future<String?> _resolveSourcePath({
+    String? photoAssetId,
+    String? photoPath,
+  }) async {
+    if (photoAssetId != null && photoAssetId.isNotEmpty) {
+      final file = await _ref
+          .read(photoLibraryGatewayProvider)
+          .fileForAsset(photoAssetId);
+      if (file != null) return file.path;
+    }
+    if (photoPath != null && photoPath.isNotEmpty) return photoPath;
+    return null;
   }
 
   MealTypeHint? _toHint(MealType? type) {

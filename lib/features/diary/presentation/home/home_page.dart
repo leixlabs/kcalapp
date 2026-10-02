@@ -562,13 +562,17 @@ class _HomePageState extends ConsumerState<HomePage> {
                     )
                     .valueOrNull,
                 onRetryRecognition: (meal) {
+                  final photoAssetId = meal.photoAssetId;
                   final photoPath = meal.photoPath;
-                  if (meal.id != null && photoPath != null) {
+                  if (meal.id != null &&
+                      ((photoAssetId != null && photoAssetId.isNotEmpty) ||
+                          (photoPath != null && photoPath.isNotEmpty))) {
                     unawaited(
                       _processRecognition(
                         ScaffoldMessenger.of(context),
                         ref.read(recognitionControllerProvider),
                         meal.id!,
+                        photoAssetId,
                         photoPath,
                         meal.mealType,
                       ),
@@ -620,13 +624,11 @@ class _HomePageState extends ConsumerState<HomePage> {
     MealType mealType,
   ) async {
     final messenger = ScaffoldMessenger.of(context);
-    String? savedPhotoPath;
     try {
-      final savedPhoto = await ref
-          .read(imageProcessorProvider)
-          .saveMealPhoto(photoPath);
-      savedPhotoPath = savedPhoto.path;
-      final persistedPhotoPath = savedPhoto.path;
+      // 自动保存进系统相册，仅持久化资源 id；沙盒内不再保留副本。
+      final assetId = await ref
+          .read(photoLibraryGatewayProvider)
+          .saveToAlbum(photoPath);
       final now = DateTime.now();
       final mealId = await ref
           .read(mealRepositoryProvider)
@@ -635,7 +637,8 @@ class _HomePageState extends ConsumerState<HomePage> {
               dateTime: now,
               mealType: mealType,
               name: 'AI 识别中',
-              photoPath: persistedPhotoPath,
+              photoAssetId: assetId,
+              photoPath: assetId == null ? photoPath : null,
               source: 'ai',
               aiRecognitionStatus: AiRecognitionStatus.processing,
               createdAt: now,
@@ -649,14 +652,12 @@ class _HomePageState extends ConsumerState<HomePage> {
           messenger,
           controller,
           mealId,
-          persistedPhotoPath,
+          assetId,
+          photoPath,
           mealType,
         ),
       );
     } catch (e) {
-      if (savedPhotoPath != null) {
-        await ref.read(imageProcessorProvider).deleteFile(savedPhotoPath);
-      }
       if (messenger.mounted) {
         messenger.showSnackBar(SnackBar(content: Text('保存饮食记录失败：$e')));
       }
@@ -667,12 +668,14 @@ class _HomePageState extends ConsumerState<HomePage> {
     ScaffoldMessengerState messenger,
     RecognitionController controller,
     int mealId,
-    String photoPath,
+    String? photoAssetId,
+    String? photoPath,
     MealType mealType,
   ) async {
     try {
       await controller.recognizeSavedMeal(
         mealId,
+        photoAssetId: photoAssetId,
         photoPath: photoPath,
         mealType: mealType,
       );

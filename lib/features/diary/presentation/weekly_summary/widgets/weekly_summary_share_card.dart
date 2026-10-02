@@ -1,8 +1,8 @@
-import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../../../../core/widgets/meal_photo.dart';
 import '../../../application/weekly_summary.dart';
 import '../../../domain/meal.dart';
 
@@ -25,6 +25,9 @@ class WeeklySummaryShareCard extends StatelessWidget {
   static const _paper = Color(0xFFF7F8F5);
   static const _softGreen = Color(0xFFEAF4EC);
   static const _green = Color(0xFF4CAF73);
+
+  /// 分享卡片照片缩略图分辨率；导出为图片时会放大，需给足清晰度。
+  static const photoThumbSize = 600;
 
   @override
   Widget build(BuildContext context) {
@@ -302,12 +305,11 @@ class _MealPhoto extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final path = meal.photoPath;
-    if (path == null || path.isEmpty) return const _PhotoPlaceholder();
-    return Image.file(
-      File(path),
-      fit: BoxFit.cover,
-      errorBuilder: (_, _, _) => const _PhotoPlaceholder(),
+    return MealPhoto(
+      assetId: meal.photoAssetId,
+      path: meal.photoPath,
+      thumbSize: WeeklySummaryShareCard.photoThumbSize,
+      placeholder: const _PhotoPlaceholder(),
     );
   }
 }

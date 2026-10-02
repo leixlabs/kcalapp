@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/providers.dart';
 import '../../../../app/theme.dart';
 import '../../../../core/utils/format_utils.dart';
+import '../../../../core/widgets/meal_photo.dart';
 import '../../../../core/widgets/ruler_value_picker.dart';
 import '../../domain/meal.dart';
 import '../../domain/food_item.dart';
@@ -110,13 +110,16 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
     final meal = _meal!;
     final theme = Theme.of(context);
     final nutrition = meal.totalNutrition;
+    final hasPhoto =
+        (meal.photoAssetId?.isNotEmpty ?? false) ||
+        (meal.photoPath?.isNotEmpty ?? false);
 
     return Scaffold(
       body: CustomScrollView(
         slivers: [
           // ── 顶部大图 / 占位 ──────────────────────────────────────────
           SliverAppBar(
-            expandedHeight: meal.photoPath != null ? 240 : 0,
+            expandedHeight: hasPhoto ? 240 : 0,
             pinned: true,
             leading: IconButton(
               icon: CircleAvatar(
@@ -141,12 +144,13 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
                 onPressed: _deleteMeal,
               ),
             ],
-            flexibleSpace: meal.photoPath != null
+            flexibleSpace: hasPhoto
                 ? FlexibleSpaceBar(
-                    background: Image.file(
-                      File(meal.photoPath!),
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => Container(
+                    background: MealPhoto(
+                      assetId: meal.photoAssetId,
+                      path: meal.photoPath,
+                      thumbSize: 900,
+                      placeholder: Container(
                         color: theme.colorScheme.surfaceContainerHighest,
                       ),
                     ),

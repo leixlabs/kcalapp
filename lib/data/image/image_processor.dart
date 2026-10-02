@@ -3,7 +3,6 @@ import 'dart:math';
 
 import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 
 class ImageProcessor {
   Future<File> processImage({
@@ -69,13 +68,5 @@ class ImageProcessor {
     final fileName =
         '${DateTime.now().microsecondsSinceEpoch}_$randomSuffix${p.extension(sourcePath)}';
     return sourceFile.copy(p.join(dir.path, fileName));
-  }
-
-  Future<File> saveMealPhoto(String sourcePath) async {
-    final documentsDir = await getApplicationDocumentsDirectory();
-    return copyToDir(
-      sourcePath: sourcePath,
-      targetDir: p.join(documentsDir.path, 'meal_photos'),
-    );
   }
 }

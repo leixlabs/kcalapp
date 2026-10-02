@@ -1,9 +1,9 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../../core/widgets/meal_photo.dart';
 import '../../../domain/meal.dart';
 import '../../../domain/meal_review.dart';
 import '../../../domain/meal_type.dart';
@@ -293,6 +293,7 @@ class _MealItemState extends State<_MealItem> {
             // ── 图片 ──────────────────────────────────────────────────
             _MealThumbnail(
               key: _thumbnailKey,
+              assetId: meal.photoAssetId,
               photoPath: meal.photoPath,
               aiRecognitionStatus: meal.aiRecognitionStatus,
             ),
@@ -371,11 +372,13 @@ class _MealItemState extends State<_MealItem> {
 // ─── 缩略图组件 ────────────────────────────────────────────────────────────────
 
 class _MealThumbnail extends StatelessWidget {
+  final String? assetId;
   final String? photoPath;
   final AiRecognitionStatus aiRecognitionStatus;
 
   const _MealThumbnail({
     super.key,
+    this.assetId,
     this.photoPath,
     required this.aiRecognitionStatus,
   });
@@ -394,13 +397,12 @@ class _MealThumbnail extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          photoPath != null
-              ? Image.file(
-                  File(photoPath!),
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => _placeholder(theme),
-                )
-              : _placeholder(theme),
+          MealPhoto(
+            assetId: assetId,
+            path: photoPath,
+            thumbSize: 240,
+            placeholder: _placeholder(theme),
+          ),
           if (aiRecognitionStatus == AiRecognitionStatus.processing)
             ColoredBox(
               color: Colors.black38,

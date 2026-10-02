@@ -882,15 +882,15 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
       return;
     }
 
-    String? savedPhotoPath;
     try {
       final draft = ref.read(recognitionDraftProvider);
       final sourcePhotoPath = draft?.photoTempPath;
+      String? photoAssetId;
       if (sourcePhotoPath != null) {
-        final savedPhoto = await ref
-            .read(imageProcessorProvider)
-            .saveMealPhoto(sourcePhotoPath);
-        savedPhotoPath = savedPhoto.path;
+        // 自动保存进系统相册，仅持久化资源 id；沙盒内不再保留副本。
+        photoAssetId = await ref
+            .read(photoLibraryGatewayProvider)
+            .saveToAlbum(sourcePhotoPath);
       }
 
       final now = DateTime.now();
@@ -898,7 +898,8 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
         dateTime: _selectedDate,
         mealType: _mealType,
         name: _nameController.text.trim(),
-        photoPath: savedPhotoPath,
+        photoAssetId: photoAssetId,
+        photoPath: photoAssetId == null ? sourcePhotoPath : null,
         nutritionReview: draft?.notes,
         servings: _servings,
         source: 'ai',
@@ -915,9 +916,6 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
       unawaited(ref.read(mealReviewControllerProvider).refreshForMeal(mealId));
       if (mounted) context.go('/');
     } catch (e) {
-      if (savedPhotoPath != null) {
-        await ref.read(imageProcessorProvider).deleteFile(savedPhotoPath);
-      }
       if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('保存失败: $e')));

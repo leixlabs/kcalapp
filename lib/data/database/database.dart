@@ -16,7 +16,7 @@ class AppDatabase {
     final path = p.join(dir.path, 'calory.db');
     return openDatabase(
       path,
-      version: 10,
+      version: 11,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
       onConfigure: (db) async {
@@ -45,6 +45,7 @@ class AppDatabase {
         meal_type TEXT NOT NULL,
         name TEXT NOT NULL,
         photo_path TEXT,
+        photo_asset_id TEXT,
         nutrition_review TEXT,
         servings REAL NOT NULL DEFAULT 1.0,
         source TEXT NOT NULL DEFAULT 'manual',
@@ -147,6 +148,10 @@ class AppDatabase {
     }
     if (oldVersion < 10) {
       await _createWeeklyReviewsTable(db);
+    }
+    if (oldVersion < 11) {
+      // 照片改为存系统相册资源 id；photo_path 仅供旧记录回退。
+      await db.execute('ALTER TABLE meals ADD COLUMN photo_asset_id TEXT');
     }
   }
 

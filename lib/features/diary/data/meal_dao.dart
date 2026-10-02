@@ -100,12 +100,13 @@ class MealDao {
     return database.transaction((tx) async {
       final now = DateTime.now().toIso8601String();
       final mealId = await tx.rawInsert(
-        'INSERT INTO meals (date_time, meal_type, name, photo_path, nutrition_review, servings, source, ai_recognition_status, is_deleted, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)',
+        'INSERT INTO meals (date_time, meal_type, name, photo_path, photo_asset_id, nutrition_review, servings, source, ai_recognition_status, is_deleted, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)',
         [
           meal.dateTime.toIso8601String(),
           meal.mealType.name,
           meal.name,
           meal.photoPath,
+          meal.photoAssetId,
           meal.nutritionReview,
           meal.servings,
           meal.source,
@@ -144,12 +145,13 @@ class MealDao {
     final database = await db.database;
     await database.transaction((tx) async {
       await tx.rawUpdate(
-        'UPDATE meals SET date_time = ?, meal_type = ?, name = ?, photo_path = ?, nutrition_review = ?, servings = ?, ai_recognition_status = ?, updated_at = ? WHERE id = ?',
+        'UPDATE meals SET date_time = ?, meal_type = ?, name = ?, photo_path = ?, photo_asset_id = ?, nutrition_review = ?, servings = ?, ai_recognition_status = ?, updated_at = ? WHERE id = ?',
         [
           meal.dateTime.toIso8601String(),
           meal.mealType.name,
           meal.name,
           meal.photoPath,
+          meal.photoAssetId,
           meal.nutritionReview,
           meal.servings,
           meal.aiRecognitionStatus.name,
@@ -277,6 +279,7 @@ class MealDao {
       mealType: MealType.fromString(row['meal_type'] as String?),
       name: row['name'] as String? ?? '',
       photoPath: row['photo_path'] as String?,
+      photoAssetId: row['photo_asset_id'] as String?,
       nutritionReview: row['nutrition_review'] as String?,
       servings: (row['servings'] as num?)?.toDouble() ?? 1.0,
       source: row['source'] as String? ?? 'manual',

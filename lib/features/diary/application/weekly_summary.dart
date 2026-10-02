@@ -123,7 +123,11 @@ class WeeklySummary {
   /// 本周所有带照片的记录，按时间先后排列。
   List<Meal> get photoMeals =>
       meals
-          .where((meal) => meal.photoPath != null && meal.photoPath!.isNotEmpty)
+          .where(
+            (meal) =>
+                (meal.photoAssetId != null && meal.photoAssetId!.isNotEmpty) ||
+                (meal.photoPath != null && meal.photoPath!.isNotEmpty),
+          )
           .toList()
         ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
 }

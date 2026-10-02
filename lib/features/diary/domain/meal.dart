@@ -10,6 +10,9 @@ class Meal {
   final MealType mealType;
   final String name;
   final String? photoPath;
+
+  /// 系统相册中的资源 id（跨重装保留）。旧记录可能为空，此时回退 [photoPath]。
+  final String? photoAssetId;
   final String? nutritionReview;
   final double servings;
   final String source;
@@ -24,6 +27,7 @@ class Meal {
     required this.mealType,
     required this.name,
     this.photoPath,
+    this.photoAssetId,
     this.nutritionReview,
     this.servings = 1.0,
     this.source = 'manual',
@@ -53,6 +57,7 @@ class Meal {
     MealType? mealType,
     String? name,
     String? photoPath,
+    String? photoAssetId,
     String? nutritionReview,
     double? servings,
     String? source,
@@ -67,6 +72,7 @@ class Meal {
       mealType: mealType ?? this.mealType,
       name: name ?? this.name,
       photoPath: photoPath ?? this.photoPath,
+      photoAssetId: photoAssetId ?? this.photoAssetId,
       nutritionReview: nutritionReview ?? this.nutritionReview,
       servings: servings ?? this.servings,
       source: source ?? this.source,

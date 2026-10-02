@@ -11,6 +11,7 @@ import '../../application/weekly_review_controller.dart';
 import '../../application/weekly_summary.dart';
 import '../../domain/meal.dart';
 import '../../domain/weekly_narrative.dart';
+import '../../../../core/widgets/meal_photo.dart';
 import '../../../../core/widgets/states.dart';
 import 'widgets/weekly_summary_share_card.dart';
 
@@ -166,6 +167,32 @@ class _WeeklySummaryPageState extends ConsumerState<WeeklySummaryPage> {
         .editImprovement(widget.selectedDate, edited.trim());
   }
 
+  Future<void> _precachePhotos() async {
+    final meals =
+        ref.read(weeklyMealsProvider(widget.selectedDate)).valueOrNull ??
+        const <Meal>[];
+    final summary = WeeklySummary(
+      weekStart: weekStartFor(widget.selectedDate),
+      meals: meals,
+    );
+    final providers = summary.photoMeals
+        .map(
+          (meal) => MealPhotoProvider.maybe(
+            assetId: meal.photoAssetId,
+            path: meal.photoPath,
+            thumbSize: WeeklySummaryShareCard.photoThumbSize,
+          ),
+        )
+        .whereType<MealPhotoProvider>();
+    for (final provider in providers) {
+      try {
+        await precacheImage(provider, context);
+      } catch (_) {
+        // 单张照片预热失败不阻塞导出，卡片内会展示占位图。
+      }
+    }
+  }
+
   Future<void> _generateAndShare(BuildContext buttonContext) async {
     final shareBox = buttonContext.findRenderObject() as RenderBox?;
     final shareOrigin = shareBox != null && shareBox.hasSize
@@ -173,6 +200,8 @@ class _WeeklySummaryPageState extends ConsumerState<WeeklySummaryPage> {
         : null;
     setState(() => _isSharing = true);
     try {
+      // 相册资源异步解析，导出前先预热，避免捕获到未加载完成的白图。
+      await _precachePhotos();
       await WidgetsBinding.instance.endOfFrame;
       final boundary = _cardKey.currentContext?.findRenderObject();
       if (boundary is! RenderRepaintBoundary) {
