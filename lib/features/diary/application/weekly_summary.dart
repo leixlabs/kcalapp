@@ -7,6 +7,22 @@ DateTime weekStartFor(DateTime date) => DateTime(
   date.day,
 ).subtract(Duration(days: date.weekday - 1));
 
+/// 该周饮食记录的指纹：天数、食物项数、热量与总重量任一变化都会改变它，
+/// 用于判断已持久化的周回顾是否过期。
+String weeklyMealSignature(Iterable<Meal> meals) {
+  var itemCount = 0;
+  var kcal = 0.0;
+  var grams = 0.0;
+  var count = 0;
+  for (final meal in meals) {
+    count += 1;
+    itemCount += meal.foodItems.length;
+    kcal += meal.totalNutrition.kcal;
+    grams += meal.totalWeightG;
+  }
+  return '$count:$itemCount:${kcal.round()}:${grams.round()}';
+}
+
 class WeeklySummary {
   final DateTime weekStart;
   final List<Meal> meals;
@@ -65,6 +81,31 @@ class WeeklySummary {
     });
   }
 
+  static const Map<FoodCategory, String> _categoryPlainNames = {
+    FoodCategory.grains: '谷薯类',
+    FoodCategory.vegetablesAndFruits: '蔬菜水果',
+    FoodCategory.meatEggsAndSeafood: '肉蛋水产',
+    FoodCategory.dairyBeansAndNuts: '奶豆坚果',
+  };
+
+  /// 无 AI 时的兜底描述：仅陈述记录到的天数、日均与占比最高的类别。
+  String get happenedSummary {
+    if (meals.isEmpty) return '这一周还没有饮食记录。';
+    final clauses = <String>['这一周记录了 $recordedDays 天'];
+    final average = averageKcalOnEstimatedDays;
+    if (average != null) clauses.add('日均约 ${average.round()} kcal');
+    final grams = foodCategoryGrams;
+    final present =
+        _categoryPlainNames.keys
+            .where((category) => (grams[category] ?? 0) > 0)
+            .toList()
+          ..sort((a, b) => (grams[b] ?? 0).compareTo(grams[a] ?? 0));
+    if (present.isNotEmpty) {
+      clauses.add('${_categoryPlainNames[present.first]}相对较多');
+    }
+    return '${clauses.join('，')}。';
+  }
+
   String get nextWeekFocus {
     final category = focusCategory;
     if (category == null) {
@@ -79,25 +120,10 @@ class WeeklySummary {
     };
   }
 
-  /// Selects up to three real meal photos from different days across the week.
-  List<Meal> get photoMeals {
-    final firstPhotoByDay = <DateTime, Meal>{};
-    for (final meal in meals) {
-      if (meal.photoPath == null || meal.photoPath!.isEmpty) continue;
-      final day = DateTime(
-        meal.dateTime.year,
-        meal.dateTime.month,
-        meal.dateTime.day,
-      );
-      firstPhotoByDay.putIfAbsent(day, () => meal);
-    }
-
-    final candidates = firstPhotoByDay.values.toList();
-    if (candidates.length <= 3) return candidates;
-    return [
-      candidates.first,
-      candidates[candidates.length ~/ 2],
-      candidates.last,
-    ];
-  }
+  /// 本周所有带照片的记录，按时间先后排列。
+  List<Meal> get photoMeals =>
+      meals
+          .where((meal) => meal.photoPath != null && meal.photoPath!.isNotEmpty)
+          .toList()
+        ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
 }

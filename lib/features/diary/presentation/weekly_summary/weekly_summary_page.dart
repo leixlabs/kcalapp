@@ -7,7 +7,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../application/diary_providers.dart';
+import '../../application/weekly_review_controller.dart';
 import '../../application/weekly_summary.dart';
+import '../../domain/meal.dart';
+import '../../domain/weekly_narrative.dart';
 import '../../../../core/widgets/states.dart';
 import 'widgets/weekly_summary_share_card.dart';
 
@@ -23,30 +26,62 @@ class WeeklySummaryPage extends ConsumerStatefulWidget {
 class _WeeklySummaryPageState extends ConsumerState<WeeklySummaryPage> {
   final _cardKey = GlobalKey();
   bool _isSharing = false;
-  String? _editedFocus;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(weeklyReviewControllerProvider).ensure(widget.selectedDate);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final mealsAsync = ref.watch(weeklyMealsProvider(widget.selectedDate));
-    final theme = Theme.of(context);
     final weekStart = weekStartFor(widget.selectedDate);
     final isCurrentWeek = weekStartFor(DateTime.now()) == weekStart;
     final periodEnd = isCurrentWeek
         ? DateTime.now()
         : weekStart.add(const Duration(days: 6));
+    final hasMeals = mealsAsync.valueOrNull?.isNotEmpty ?? false;
+    final stored = ref
+        .watch(weeklyReviewProvider(widget.selectedDate))
+        .valueOrNull;
+    final hasStoredReview = stored?.happened?.isNotEmpty ?? false;
 
     return Scaffold(
-      appBar: AppBar(title: Text(isCurrentWeek ? '本周回顾' : '周回顾')),
+      appBar: AppBar(
+        title: Text(isCurrentWeek ? '本周回顾' : '周回顾'),
+        actions: [
+          if (hasMeals && hasStoredReview)
+            IconButton(
+              tooltip: '调整饮食建议',
+              icon: const Icon(Icons.edit_outlined),
+              onPressed: _editImprovement,
+            ),
+        ],
+      ),
       body: mealsAsync.when(
         loading: () => const LoadingView(),
         error: (error, _) => ErrorStateView(
-          message: '周总结加载失败：$error',
+          message: '周回顾加载失败：$error',
           onRetry: () =>
               ref.invalidate(weeklyMealsProvider(widget.selectedDate)),
         ),
         data: (meals) {
           final summary = WeeklySummary(weekStart: weekStart, meals: meals);
-          final nextWeekFocus = _editedFocus ?? summary.nextWeekFocus;
+          final fallback = WeeklyNarrative(
+            happened: summary.happenedSummary,
+            improvement: summary.nextWeekFocus,
+          );
+          final happened = hasStoredReview
+              ? stored!.happened!
+              : fallback.happened;
+          final improvement = (stored?.improvement?.isNotEmpty ?? false)
+              ? stored!.improvement!
+              : fallback.improvement;
+
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
             children: [
@@ -55,67 +90,10 @@ class _WeeklySummaryPageState extends ConsumerState<WeeklySummaryPage> {
                 child: WeeklySummaryShareCard(
                   summary: summary,
                   periodEnd: periodEnd,
-                  nextWeekFocus: nextWeekFocus,
+                  happened: happened,
+                  improvement: improvement,
                 ),
               ),
-              const SizedBox(height: 16),
-              Text(
-                meals.isEmpty
-                    ? '这一周还没有饮食记录。记录几餐后，就能生成带有真实餐食照片的回顾卡片。'
-                    : '图片只使用本周已保存的餐食照片。热量和食物类别均根据本地饮食记录整理，营养数据为估算。',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.outline,
-                  height: 1.4,
-                ),
-              ),
-              if (meals.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                '下周重点',
-                                style: theme.textTheme.titleSmall?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                            TextButton.icon(
-                              onPressed: () =>
-                                  _editFocus(summary.nextWeekFocus),
-                              icon: const Icon(Icons.edit_outlined, size: 16),
-                              label: const Text('调整'),
-                            ),
-                          ],
-                        ),
-                        Text(nextWeekFocus),
-                        if (summary.focusCategory case final category?) ...[
-                          const SizedBox(height: 10),
-                          Text(
-                            '参考：${category.label} ${(summary.foodCategoryGrams[category] ?? 0).round()} / ${category.weeklyReferenceGrams.round()} g',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.outline,
-                            ),
-                          ),
-                        ],
-                        const SizedBox(height: 8),
-                        Text(
-                          '根据本周已记录饮食整理；记录不代表完整饮食，也不构成营养建议。',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.outline,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
             ],
           );
         },
@@ -125,7 +103,7 @@ class _WeeklySummaryPageState extends ConsumerState<WeeklySummaryPage> {
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
           child: Builder(
             builder: (buttonContext) => FilledButton.icon(
-              onPressed: _isSharing || mealsAsync.valueOrNull?.isEmpty != false
+              onPressed: _isSharing || !hasMeals
                   ? null
                   : () => _generateAndShare(buttonContext),
               icon: _isSharing
@@ -134,7 +112,7 @@ class _WeeklySummaryPageState extends ConsumerState<WeeklySummaryPage> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.ios_share_outlined),
-              label: Text(_isSharing ? '正在生成…' : '生成分享卡片'),
+              label: Text(_isSharing ? '正在生成…' : '生成图片保存'),
             ),
           ),
         ),
@@ -142,20 +120,32 @@ class _WeeklySummaryPageState extends ConsumerState<WeeklySummaryPage> {
     );
   }
 
-  Future<void> _editFocus(String suggestedFocus) async {
-    final controller = TextEditingController(
-      text: _editedFocus ?? suggestedFocus,
+  Future<void> _editImprovement() async {
+    final stored = ref
+        .read(weeklyReviewProvider(widget.selectedDate))
+        .valueOrNull;
+    final meals =
+        ref.read(weeklyMealsProvider(widget.selectedDate)).valueOrNull ??
+        const <Meal>[];
+    final summary = WeeklySummary(
+      weekStart: weekStartFor(widget.selectedDate),
+      meals: meals,
     );
-    final editedFocus = await showDialog<String>(
+    final current = (stored?.improvement?.isNotEmpty ?? false)
+        ? stored!.improvement!
+        : summary.nextWeekFocus;
+
+    final controller = TextEditingController(text: current);
+    final edited = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('调整下周重点'),
+        title: const Text('调整饮食建议'),
         content: TextField(
           controller: controller,
           autofocus: true,
           maxLines: 2,
           maxLength: 60,
-          decoration: const InputDecoration(labelText: '下周想尝试什么？'),
+          decoration: const InputDecoration(labelText: '下周想改进什么？'),
         ),
         actions: [
           TextButton(
@@ -170,8 +160,10 @@ class _WeeklySummaryPageState extends ConsumerState<WeeklySummaryPage> {
       ),
     );
     controller.dispose();
-    if (!mounted || editedFocus == null || editedFocus.trim().isEmpty) return;
-    setState(() => _editedFocus = editedFocus.trim());
+    if (!mounted || edited == null || edited.trim().isEmpty) return;
+    await ref
+        .read(weeklyReviewControllerProvider)
+        .editImprovement(widget.selectedDate, edited.trim());
   }
 
   Future<void> _generateAndShare(BuildContext buttonContext) async {
@@ -208,7 +200,6 @@ class _WeeklySummaryPageState extends ConsumerState<WeeklySummaryPage> {
       await SharePlus.instance.share(
         ShareParams(
           title: '本周饮食回顾',
-          text: '本周饮食记录整理，营养数据为估算。',
           files: [
             XFile(imageFile.path, name: '本周饮食回顾.png', mimeType: 'image/png'),
           ],

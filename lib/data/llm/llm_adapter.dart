@@ -7,7 +7,9 @@ import 'package:dio/dio.dart';
 
 import '../../core/utils/app_user_agent.dart';
 import '../../features/llm_settings/domain/llm_profile.dart';
+import '../../features/diary/domain/food_category.dart';
 import '../../features/diary/domain/meal.dart';
+import '../../features/diary/domain/weekly_narrative.dart';
 import 'llm_schema.dart';
 
 class LlmAdapter {
@@ -249,6 +251,144 @@ class LlmAdapter {
       );
     }
     return content.trim();
+  }
+
+  /// 为某一周的全部已保存记录生成两段中文回顾；不上传图片。
+  Future<WeeklyNarrative> summarizeWeek({
+    required LlmProfile profile,
+    required String apiKey,
+    required DateTime weekStart,
+    required List<Meal> meals,
+  }) async {
+    final weekEnd = weekStart.add(const Duration(days: 6));
+    final recordedDays = meals
+        .map(
+          (meal) => DateTime(
+            meal.dateTime.year,
+            meal.dateTime.month,
+            meal.dateTime.day,
+          ),
+        )
+        .toSet()
+        .length;
+
+    final dailyKcal = <DateTime, double>{};
+    for (final meal in meals) {
+      final kcal = meal.totalNutrition.kcal;
+      if (kcal <= 0) continue;
+      final day = DateTime(
+        meal.dateTime.year,
+        meal.dateTime.month,
+        meal.dateTime.day,
+      );
+      dailyKcal[day] = (dailyKcal[day] ?? 0) + kcal;
+    }
+    final averageKcal = dailyKcal.isEmpty
+        ? null
+        : dailyKcal.values.reduce((a, b) => a + b) / dailyKcal.length;
+
+    final categoryLines = aggregateWeeklyFoodCategories(meals).entries
+        .where((entry) => entry.value > 0)
+        .map(
+          (entry) =>
+              '${entry.key.label} ${entry.value.round()}g / 参考 ${entry.key.weeklyReferenceGrams.round()}g',
+        )
+        .join('；');
+    final foodWeights = <String, double>{};
+    for (final meal in meals) {
+      for (final item in meal.foodItems) {
+        final name = item.name.trim();
+        if (name.isEmpty) continue;
+        foodWeights[name] =
+            (foodWeights[name] ?? 0) + item.weightG * meal.servings;
+      }
+    }
+    final topFoods =
+        (foodWeights.entries.toList()
+              ..sort((a, b) => b.value.compareTo(a.value)))
+            .take(8)
+            .map((entry) => entry.key)
+            .join('、');
+    final dailyLines = dailyKcal.entries
+        .map(
+          (entry) =>
+              '${entry.key.month}/${entry.key.day} ${entry.value.round()} kcal',
+        )
+        .join('；');
+    final period =
+        '${weekStart.month}/${weekStart.day}–${weekEnd.month}/${weekEnd.day}';
+
+    final response = await _dio.post(
+      '${profile.baseUrl}/chat/completions',
+      options: Options(
+        headers: {
+          'Authorization': 'Bearer $apiKey',
+          'Content-Type': 'application/json',
+        },
+        sendTimeout: Duration(seconds: profile.timeoutSeconds),
+        receiveTimeout: Duration(seconds: profile.timeoutSeconds),
+      ),
+      data: {
+        'model': profile.model,
+        'messages': [
+          {
+            'role': 'user',
+            'content':
+                '''你现在是一位犀利又懂行的饮食观察者，要为这一周的饮食写一段「锐评」。请根据下面这一周的真实饮食记录，输出一个 JSON 对象，仅包含两个字符串字段：{"happened":"...","improvement":"..."}。
+- happened（本周锐评）：一到两句有态度、有画面感、让人记得住的中文。要点出这一周实际吃了什么、哪类食物或哪顿反复出现、哪里有亮点或哪里明显失衡，带点调侃或心疼的语气，但始终善意。必须落到具体食物或习惯上，可以用食物名制造记忆点，不要堆砌数字和营养术语，不评分、不做医疗或营养诊断，不超过 60 个汉字。
+- improvement（饮食建议）：一句具体、可执行的中文建议，告诉下周可以怎么调整，不超过 35 个汉字。
+只输出这个 JSON，不要 Markdown、不要列表，不要出现「AI」「免责声明」「仅供参考」等字样。
+
+周期：$period
+有记录天数：$recordedDays 天
+已估算日均：${averageKcal == null ? '无' : '${averageKcal.round()} kcal'}
+每日热量：${dailyLines.isEmpty ? '无' : dailyLines}
+各类食物累计：${categoryLines.isEmpty ? '无' : categoryLines}
+本周出现较多的食物：${topFoods.isEmpty ? '无' : topFoods}''',
+          },
+        ],
+      },
+    );
+    final content = response.data['choices']?[0]?['message']?['content'];
+    if (content is! String || content.trim().isEmpty) {
+      throw const LlmConnectionFailure(
+        LlmConnectionError.invalidResponse,
+        '服务未返回周回顾内容',
+      );
+    }
+    final decoded = _decodeJsonObject(content);
+    final happened = decoded?['happened'];
+    if (happened is! String || happened.trim().isEmpty) {
+      throw const LlmConnectionFailure(
+        LlmConnectionError.invalidResponse,
+        '服务返回的周回顾内容格式不正确',
+      );
+    }
+    final improvement = decoded?['improvement'];
+    return WeeklyNarrative(
+      happened: happened.trim(),
+      improvement: improvement is String ? improvement.trim() : '',
+    );
+  }
+
+  /// 从模型回复中宽松地取出第一个 JSON 对象，容忍代码块等包裹内容。
+  Map<String, dynamic>? _decodeJsonObject(String content) {
+    final trimmed = content.trim();
+    final candidates = <String>[
+      trimmed,
+      if (trimmed.contains('{') && trimmed.contains('}'))
+        trimmed.substring(trimmed.indexOf('{'), trimmed.lastIndexOf('}') + 1),
+    ];
+    for (final candidate in candidates) {
+      try {
+        final decoded = jsonDecode(candidate);
+        if (decoded is Map<String, dynamic>) return decoded;
+        if (decoded is Map) return decoded.cast<String, dynamic>();
+      } on FormatException {
+        continue;
+      }
+    }
+    return null;
   }
 
   String _buildPrompt(

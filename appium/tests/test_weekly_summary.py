@@ -21,6 +21,6 @@ def test_compact_home_entry_opens_weekly_summary(driver):
     )
     entry.click()
     helpers.wait_for(driver, helpers.by_label_contains("本周回顾"), timeout=15)
-    assert helpers.exists(driver, helpers.by_label_contains("生成分享卡片")), (
+    assert helpers.exists(driver, helpers.by_label_contains("生成图片保存")), (
         "Weekly summary page does not expose the share-card action"
     )

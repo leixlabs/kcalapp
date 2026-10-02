@@ -61,13 +61,40 @@ void main() {
       },
     );
 
-    test('selects up to three photos from different days', () {
+    test('summarizes the recorded week without AI', () {
       final monday = DateTime(2026, 9, 28);
       final summary = WeeklySummary(
         weekStart: monday,
         meals: [
+          _meal(
+            monday,
+            kcal: 600,
+            weightG: 300,
+            categoryId: FoodCategory.grains.id,
+          ),
+          _meal(
+            monday.add(const Duration(days: 1)),
+            kcal: 400,
+            categoryId: FoodCategory.vegetablesAndFruits.id,
+          ),
+        ],
+      );
+
+      expect(summary.happenedSummary, contains('记录了 2 天'));
+      expect(summary.happenedSummary, contains('日均约 500 kcal'));
+      expect(summary.happenedSummary, contains('谷薯类相对较多'));
+    });
+
+    test('keeps every photo in chronological order', () {
+      final monday = DateTime(2026, 9, 28, 8);
+      final summary = WeeklySummary(
+        weekStart: DateTime(2026, 9, 28),
+        meals: [
           _meal(monday, photoPath: '/one.jpg'),
-          _meal(monday, photoPath: '/same-day.jpg'),
+          _meal(
+            monday.add(const Duration(hours: 1)),
+            photoPath: '/same-day.jpg',
+          ),
           _meal(monday.add(const Duration(days: 2)), photoPath: '/middle.jpg'),
           _meal(monday.add(const Duration(days: 6)), photoPath: '/last.jpg'),
         ],
@@ -75,9 +102,27 @@ void main() {
 
       expect(summary.photoMeals.map((meal) => meal.photoPath), [
         '/one.jpg',
+        '/same-day.jpg',
         '/middle.jpg',
         '/last.jpg',
       ]);
+    });
+
+    test('signature changes when the week records change', () {
+      final monday = DateTime(2026, 9, 28);
+      final first = weeklyMealSignature([
+        _meal(monday, kcal: 100, categoryId: FoodCategory.grains.id),
+      ]);
+      final second = weeklyMealSignature([
+        _meal(monday, kcal: 100, categoryId: FoodCategory.grains.id),
+        _meal(
+          monday.add(const Duration(days: 1)),
+          kcal: 200,
+          categoryId: FoodCategory.grains.id,
+        ),
+      ]);
+
+      expect(first, isNot(second));
     });
   });
 }

@@ -7,6 +7,7 @@ import '../domain/meal.dart';
 import '../domain/food_category.dart';
 import '../domain/meal_review.dart';
 import '../domain/meal_type.dart';
+import '../domain/weekly_review.dart';
 
 final selectedDateProvider = StateProvider<DateTime>((ref) => DateTime.now());
 
@@ -79,4 +80,12 @@ final mealReviewProvider = FutureProvider.family<MealReview?, MealReviewKey>((
   key,
 ) {
   return ref.watch(mealReviewDaoProvider).get(key.date, key.mealType);
+});
+
+/// 已持久化的周回顾；按所选日期所属自然周读取，不存在时为 null。
+final weeklyReviewProvider = FutureProvider.family<WeeklyReview?, DateTime>((
+  ref,
+  selectedDate,
+) {
+  return ref.watch(weeklyReviewDaoProvider).get(weekStartFor(selectedDate));
 });

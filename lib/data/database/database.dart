@@ -16,7 +16,7 @@ class AppDatabase {
     final path = p.join(dir.path, 'calory.db');
     return openDatabase(
       path,
-      version: 9,
+      version: 10,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
       onConfigure: (db) async {
@@ -96,6 +96,7 @@ class AppDatabase {
     ''');
 
     await _createMealReviewsTable(db);
+    await _createWeeklyReviewsTable(db);
 
     await db.execute('CREATE INDEX idx_meals_date ON meals(date_time)');
     await db.execute('CREATE INDEX idx_meals_type ON meals(meal_type)');
@@ -144,6 +145,9 @@ class AppDatabase {
     if (oldVersion < 9) {
       await _createMealReviewsTable(db);
     }
+    if (oldVersion < 10) {
+      await _createWeeklyReviewsTable(db);
+    }
   }
 
   Future<void> _createMealReviewsTable(DatabaseExecutor db) async {
@@ -155,6 +159,18 @@ class AppDatabase {
         status TEXT NOT NULL DEFAULT 'idle',
         updated_at TEXT NOT NULL DEFAULT (datetime('now')),
         PRIMARY KEY (date, meal_type)
+      )
+    ''');
+  }
+
+  Future<void> _createWeeklyReviewsTable(DatabaseExecutor db) async {
+    await db.execute('''
+      CREATE TABLE weekly_reviews (
+        week_start TEXT PRIMARY KEY,
+        happened TEXT,
+        improvement TEXT,
+        signature TEXT NOT NULL DEFAULT '',
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
       )
     ''');
   }

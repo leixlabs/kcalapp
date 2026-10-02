@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
@@ -8,13 +9,15 @@ import '../../../domain/meal.dart';
 class WeeklySummaryShareCard extends StatelessWidget {
   final WeeklySummary summary;
   final DateTime periodEnd;
-  final String? nextWeekFocus;
+  final String happened;
+  final String improvement;
 
   const WeeklySummaryShareCard({
     super.key,
     required this.summary,
     required this.periodEnd,
-    this.nextWeekFocus,
+    required this.happened,
+    required this.improvement,
   });
 
   static const _ink = Color(0xFF23352A);
@@ -37,30 +40,18 @@ class WeeklySummaryShareCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           child: Column(
             children: [
+              _PeriodHeader(weekStart: summary.weekStart, periodEnd: periodEnd),
               Expanded(
-                flex: 11,
-                child: _PhotoCollage(
-                  meals: summary.photoMeals,
-                  weekStart: summary.weekStart,
-                  periodEnd: periodEnd,
-                ),
+                flex: 9,
+                child: _PhotoCollage(meals: summary.photoMeals),
               ),
               Expanded(
-                flex: 10,
+                flex: 11,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
+                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        '一周饮食回顾',
-                        style: TextStyle(
-                          color: _ink,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
                       Row(
                         children: [
                           _StatPill(
@@ -80,33 +71,17 @@ class WeeklySummaryShareCard extends StatelessWidget {
                           ),
                         ],
                       ),
-                      const Spacer(),
-                      const Text(
-                        '下周试试',
-                        style: TextStyle(
-                          color: _green,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      const SizedBox(height: 14),
+                      _NarrativeSection(
+                        label: '本周锐评',
+                        text: happened,
+                        maxLines: 3,
                       ),
-                      const SizedBox(height: 3),
-                      Text(
-                        nextWeekFocus ?? summary.nextWeekFocus,
+                      const SizedBox(height: 12),
+                      _NarrativeSection(
+                        label: '饮食建议',
+                        text: improvement,
                         maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: _ink,
-                          fontSize: 14,
-                          height: 1.3,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const Spacer(),
-                      const Text(
-                        '根据本周已记录饮食整理 · 营养数据为估算',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: _mutedInk, fontSize: 9),
                       ),
                     ],
                   ),
@@ -116,6 +91,86 @@ class WeeklySummaryShareCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _PeriodHeader extends StatelessWidget {
+  final DateTime weekStart;
+  final DateTime periodEnd;
+
+  const _PeriodHeader({required this.weekStart, required this.periodEnd});
+
+  @override
+  Widget build(BuildContext context) {
+    final start = '${weekStart.year}年${weekStart.month}月${weekStart.day}日';
+    final end = weekStart.year == periodEnd.year
+        ? '${periodEnd.month}月${periodEnd.day}日'
+        : '${periodEnd.year}年${periodEnd.month}月${periodEnd.day}日';
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 10),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.event_outlined,
+            size: 15,
+            color: WeeklySummaryShareCard._green,
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              '$start – $end',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: WeeklySummaryShareCard._ink,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NarrativeSection extends StatelessWidget {
+  final String label;
+  final String text;
+  final int maxLines;
+
+  const _NarrativeSection({
+    required this.label,
+    required this.text,
+    required this.maxLines,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: WeeklySummaryShareCard._green,
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          text,
+          maxLines: maxLines,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: WeeklySummaryShareCard._ink,
+            fontSize: 13,
+            height: 1.35,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -170,119 +225,104 @@ class _StatPill extends StatelessWidget {
   }
 }
 
+/// 顶部图片区：展示本周全部带照片的记录；没有照片时用 3 个占位块。
 class _PhotoCollage extends StatelessWidget {
   final List<Meal> meals;
-  final DateTime weekStart;
-  final DateTime periodEnd;
 
-  const _PhotoCollage({
-    required this.meals,
-    required this.weekStart,
-    required this.periodEnd,
-  });
+  const _PhotoCollage({required this.meals});
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final background = theme.colorScheme.primaryContainer;
-    final foreground = theme.colorScheme.onPrimaryContainer;
-    final dates =
-        '${weekStart.month}/${weekStart.day}—${periodEnd.month}/${periodEnd.day}';
+    final tiles = meals.isEmpty
+        ? List<Widget>.generate(3, (_) => const _PhotoPlaceholder())
+        : meals.map<Widget>((meal) => _MealPhoto(meal: meal)).toList();
+    return _layout(tiles);
+  }
 
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        if (meals.isEmpty)
-          ColoredBox(
-            color: background,
-            child: Center(
+  Widget _layout(List<Widget> tiles) {
+    switch (tiles.length) {
+      case 1:
+        return tiles.first;
+      case 2:
+        return Row(
+          children: [
+            Expanded(child: tiles[0]),
+            const SizedBox(width: 3),
+            Expanded(child: tiles[1]),
+          ],
+        );
+      case 3:
+        return Row(
+          children: [
+            Expanded(flex: 2, child: tiles[0]),
+            const SizedBox(width: 3),
+            Expanded(
               child: Column(
-                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.restaurant_outlined, color: foreground, size: 44),
-                  const SizedBox(height: 8),
-                  Text(
-                    '这一周的饮食记录',
-                    style: TextStyle(
-                      color: foreground,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  Expanded(child: tiles[1]),
+                  const SizedBox(height: 3),
+                  Expanded(child: tiles[2]),
                 ],
               ),
             ),
-          )
-        else
-          _buildPhotos(context),
-        Positioned(
-          top: 12,
-          left: 12,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.55),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              child: Text(
-                dates,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPhotos(BuildContext context) {
-    if (meals.length == 1) return _photo(meals.first);
-    if (meals.length == 2) {
-      return Row(
-        children: [
-          Expanded(child: _photo(meals[0])),
-          const SizedBox(width: 3),
-          Expanded(child: _photo(meals[1])),
-        ],
-      );
+          ],
+        );
+      default:
+        final columns = math.sqrt(tiles.length).ceil().clamp(2, 3);
+        return _grid(tiles, columns);
     }
-    return Row(
-      children: [
-        Expanded(flex: 2, child: _photo(meals[0])),
-        const SizedBox(width: 3),
-        Expanded(
-          child: Column(
-            children: [
-              Expanded(child: _photo(meals[1])),
-              const SizedBox(height: 3),
-              Expanded(child: _photo(meals[2])),
-            ],
-          ),
-        ),
-      ],
-    );
   }
 
-  Widget _photo(Meal meal) {
+  Widget _grid(List<Widget> tiles, int columns) {
+    final rows = <Widget>[];
+    for (var start = 0; start < tiles.length; start += columns) {
+      final cells = <Widget>[];
+      for (var offset = 0; offset < columns; offset++) {
+        if (offset > 0) cells.add(const SizedBox(width: 3));
+        final index = start + offset;
+        cells.add(
+          Expanded(
+            child: index < tiles.length
+                ? tiles[index]
+                : const SizedBox.shrink(),
+          ),
+        );
+      }
+      if (rows.isNotEmpty) rows.add(const SizedBox(height: 3));
+      rows.add(Expanded(child: Row(children: cells)));
+    }
+    return Column(children: rows);
+  }
+}
+
+class _MealPhoto extends StatelessWidget {
+  final Meal meal;
+
+  const _MealPhoto({required this.meal});
+
+  @override
+  Widget build(BuildContext context) {
     final path = meal.photoPath;
-    if (path == null || path.isEmpty) {
-      return const ColoredBox(color: WeeklySummaryShareCard._softGreen);
-    }
+    if (path == null || path.isEmpty) return const _PhotoPlaceholder();
     return Image.file(
       File(path),
       fit: BoxFit.cover,
-      errorBuilder: (_, _, _) => const ColoredBox(
-        color: WeeklySummaryShareCard._softGreen,
-        child: Center(
-          child: Icon(
-            Icons.restaurant_outlined,
-            color: WeeklySummaryShareCard._mutedInk,
-          ),
+      errorBuilder: (_, _, _) => const _PhotoPlaceholder(),
+    );
+  }
+}
+
+class _PhotoPlaceholder extends StatelessWidget {
+  const _PhotoPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return const ColoredBox(
+      color: WeeklySummaryShareCard._softGreen,
+      child: Center(
+        child: Icon(
+          Icons.restaurant_outlined,
+          color: WeeklySummaryShareCard._mutedInk,
         ),
       ),
     );

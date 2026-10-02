@@ -5,6 +5,7 @@ import '../data/database/database.dart';
 import '../features/diary/data/meal_dao.dart';
 import '../features/diary/data/meal_repository.dart';
 import '../features/diary/data/meal_review_dao.dart';
+import '../features/diary/data/weekly_review_dao.dart';
 import '../features/diary/data/goal_dao.dart';
 import '../features/diary/data/goal_repository.dart';
 import '../features/llm_settings/data/llm_profile_dao.dart';
@@ -49,6 +50,10 @@ final mealRepositoryProvider = Provider<MealRepository>((ref) {
 
 final mealReviewDaoProvider = Provider<MealReviewDao>((ref) {
   return MealReviewDao(ref.watch(databaseProvider));
+});
+
+final weeklyReviewDaoProvider = Provider<WeeklyReviewDao>((ref) {
+  return WeeklyReviewDao(ref.watch(databaseProvider));
 });
 
 final goalRepositoryProvider = Provider<GoalRepository>((ref) {
