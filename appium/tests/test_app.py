@@ -110,7 +110,9 @@ def _navigate_to_llm_settings(driver):
         timeout=15,
     )
     settings_entry.click()
-    helpers.wait_for(driver, helpers.by_label("LLM 设置"), timeout=15)
+    # 设置页标题已由 "LLM 设置" 改为 "设置"（与首页入口同名），
+    # 改用设置页独有的「添加新配置」作为落地标志。
+    helpers.wait_for(driver, helpers.by_label("添加新配置"), timeout=15)
 
 
 def _fill_textfield_by_index(driver, index: int, text: str):

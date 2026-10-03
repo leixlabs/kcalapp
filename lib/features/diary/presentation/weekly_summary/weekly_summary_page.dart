@@ -27,6 +27,7 @@ class WeeklySummaryPage extends ConsumerStatefulWidget {
 
 class _WeeklySummaryPageState extends ConsumerState<WeeklySummaryPage> {
   final _cardKey = GlobalKey();
+  Future<void> _photosReady = Future<void>.value();
   bool _isSharing = false;
 
   @override
@@ -98,6 +99,7 @@ class _WeeklySummaryPageState extends ConsumerState<WeeklySummaryPage> {
                   happened: happened,
                   improvement: improvement,
                   dailyKcalGoal: dailyKcalGoal,
+                  onPhotosReady: (ready) => _photosReady = ready,
                 ),
               ),
             ],
@@ -193,7 +195,7 @@ class _WeeklySummaryPageState extends ConsumerState<WeeklySummaryPage> {
       try {
         await precacheImage(provider, context);
       } catch (_) {
-        // 单张照片预热失败不阻塞导出；对应格子留空，不再使用占位图。
+        // 单张照片预热失败不阻塞导出；拼图会在预筛选时跳过不可读照片。
       }
     }
   }
@@ -205,7 +207,8 @@ class _WeeklySummaryPageState extends ConsumerState<WeeklySummaryPage> {
         : null;
     setState(() => _isSharing = true);
     try {
-      // 相册资源异步解析，导出前先预热，避免捕获到未加载完成的白图。
+      // 等待可读照片筛选完成，避免把拼图加载指示器截进分享图片。
+      await _photosReady;
       await _precachePhotos();
       await WidgetsBinding.instance.endOfFrame;
       final boundary = _cardKey.currentContext?.findRenderObject();

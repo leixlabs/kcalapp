@@ -48,7 +48,9 @@ def _open_llm_settings(driver) -> None:
         timeout=15,
     )
     settings.click()
-    helpers.wait_for(driver, helpers.by_label("LLM 设置"), timeout=15)
+    # 设置页标题已由 "LLM 设置" 改为 "设置"（与首页入口同名），
+    # 改用设置页独有的「添加新配置」作为落地标志。
+    helpers.wait_for(driver, helpers.by_label("添加新配置"), timeout=15)
 
 
 def _return_home_from_settings(driver) -> None:
@@ -227,13 +229,19 @@ def test_configure_recognize_and_review_daily_detail(driver):
 
     # Meal details are edited inline; there is no separate edit page.
     helpers.wait_for(driver, helpers.by_label_contains(MEAL_NAME), timeout=15)
-    assert helpers.exists(driver, helpers.by_label_contains("营养师评价")), (
-        "Meal details do not show the nutritionist review near the top"
+    # 餐次级营养评价已取代单条记录的「营养师评价」：详情页顶部改为
+    # 「已计入某餐次」轻量卡片，并可进入完整评价。
+    assert helpers.exists(driver, helpers.by_label_contains("已计入")), (
+        "Meal details do not show the meal-level nutrition review near the top"
     )
     assert helpers.exists(
         driver,
+        helpers.by_label_contains("查看完整评价"),
+    ), "Meal details do not expose the full meal review entry"
+    assert helpers.exists(
+        driver,
         helpers.by_label_contains("营养搭配较均衡，建议适量食用"),
-    ), "Saved meal did not retain the nutritionist review from the mock response"
+    ), "Saved meal review did not surface the mock LLM response content"
 
     # 检查食材在查看页中可见
     for ingredient in ("饺子", "鸡蛋", "橘子"):
@@ -249,7 +257,8 @@ def test_configure_recognize_and_review_daily_detail(driver):
         "Meal view does not show the expected total of 462 kcal"
     )
 
-    for label in ("钙", "钠", "铁", "镁", "维生素A"):
+    # 识别仅保留核心微量营养素（钙/铁/钠 + 维生素 A/C/D/B12）。
+    for label in ("钙", "钠", "铁", "维生素A", "维生素C", "维生素D", "维生素B12"):
         found = False
         for _ in range(8):
             if helpers.exists(driver, helpers.by_label_contains(label)):

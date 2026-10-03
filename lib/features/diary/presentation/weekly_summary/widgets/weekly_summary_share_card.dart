@@ -20,6 +20,7 @@ class WeeklySummaryShareCard extends StatelessWidget {
 
   /// 本周生效的每日热量目标，用于热力图的达成度配色。
   final double dailyKcalGoal;
+  final ValueChanged<Future<void>>? onPhotosReady;
 
   const WeeklySummaryShareCard({
     super.key,
@@ -28,6 +29,7 @@ class WeeklySummaryShareCard extends StatelessWidget {
     required this.happened,
     required this.improvement,
     required this.dailyKcalGoal,
+    this.onPhotosReady,
   });
 
   static const _ink = Color(0xFF23352A);
@@ -59,10 +61,14 @@ class WeeklySummaryShareCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            const _ShareTitleHeader(),
             _PeriodHeader(weekStart: summary.weekStart, periodEnd: periodEnd),
-            _PhotoCollage(meals: summary.photoMeals),
+            _PhotoCollage(
+              meals: summary.photoMeals,
+              onPhotosReady: onPhotosReady,
+            ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -97,6 +103,7 @@ class WeeklySummaryShareCard extends StatelessWidget {
                 ],
               ),
             ),
+            const _ShareFooter(),
           ],
         ),
       ),
@@ -110,6 +117,49 @@ class WeeklySummaryShareCard extends StatelessWidget {
     FoodCategory.dairyBeansAndNuts => const Color(0xFF6C8FB8),
     FoodCategory.other => _mutedInk,
   };
+}
+
+class _ShareTitleHeader extends StatelessWidget {
+  const _ShareTitleHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.fromLTRB(20, 36, 20, 16),
+      child: Text(
+        '本周饮食回顾',
+        style: TextStyle(
+          color: WeeklySummaryShareCard._ink,
+          fontSize: 24,
+          fontWeight: FontWeight.w800,
+          height: 1.2,
+        ),
+      ),
+    );
+  }
+}
+
+class _ShareFooter extends StatelessWidget {
+  const _ShareFooter();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.fromLTRB(20, 14, 20, 30),
+      child: Align(
+        alignment: Alignment.centerRight,
+        child: Text(
+          '生成自 kcalapp',
+          style: TextStyle(
+            color: WeeklySummaryShareCard._mutedInk,
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.3,
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _PeriodHeader extends StatelessWidget {
@@ -405,47 +455,110 @@ class _NarrativeSection extends StatelessWidget {
 ///
 /// 没有照片时整块收起，不使用占位图；照片超过展示上限时，
 /// 在最后一张叠加「+N」提示未展示的数量。
-class _PhotoCollage extends StatelessWidget {
+class _PhotoCollage extends StatefulWidget {
   final List<Meal> meals;
+  final ValueChanged<Future<void>>? onPhotosReady;
 
-  const _PhotoCollage({required this.meals});
+  const _PhotoCollage({required this.meals, this.onPhotosReady});
 
+  @override
+  State<_PhotoCollage> createState() => _PhotoCollageState();
+}
+
+class _PhotoCollageState extends State<_PhotoCollage> {
   static const _maxTiles = 9;
   static const _gap = 3.0;
 
+  late Future<List<Meal>> _readableMeals;
+
+  @override
+  void initState() {
+    super.initState();
+    _setReadableMealsFuture();
+  }
+
+  @override
+  void didUpdateWidget(covariant _PhotoCollage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_sameMeals(oldWidget.meals, widget.meals)) {
+      _setReadableMealsFuture();
+    }
+  }
+
+  void _setReadableMealsFuture() {
+    _readableMeals = _findReadableMeals(widget.meals);
+    widget.onPhotosReady?.call(_readableMeals.then<void>((_) {}));
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (meals.isEmpty) return const SizedBox.shrink();
+    return FutureBuilder<List<Meal>>(
+      future: _readableMeals,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const AspectRatio(
+            aspectRatio: 4 / 3,
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
 
-    final overflow = meals.length - _maxTiles;
-    final visible = meals.take(_maxTiles).toList();
-    final tiles = <Widget>[
-      for (var i = 0; i < visible.length; i++)
-        if (overflow > 0 && i == visible.length - 1)
-          Stack(
-            fit: StackFit.expand,
-            children: [
-              _MealPhoto(meal: visible[i]),
-              ColoredBox(
-                color: const Color(0x66000000),
-                child: Center(
-                  child: Text(
-                    '+$overflow',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
+        final meals = snapshot.data!;
+        if (meals.isEmpty) return const SizedBox.shrink();
+
+        final overflow = meals.length - _maxTiles;
+        final visible = meals.take(_maxTiles).toList();
+        final tiles = <Widget>[
+          for (var i = 0; i < visible.length; i++)
+            if (overflow > 0 && i == visible.length - 1)
+              Stack(
+                fit: StackFit.expand,
+                children: [
+                  _MealPhoto(meal: visible[i]),
+                  ColoredBox(
+                    color: const Color(0x66000000),
+                    child: Center(
+                      child: Text(
+                        '+$overflow',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-            ],
-          )
-        else
-          _MealPhoto(meal: visible[i]),
-    ];
+                ],
+              )
+            else
+              _MealPhoto(meal: visible[i]),
+        ];
 
-    return AspectRatio(aspectRatio: 4 / 3, child: _layout(tiles));
+        return AspectRatio(aspectRatio: 4 / 3, child: _layout(tiles));
+      },
+    );
+  }
+
+  Future<List<Meal>> _findReadableMeals(List<Meal> meals) =>
+      filterReadablePhotoMeals(meals, (meal) {
+        final provider = MealPhotoProvider.maybe(
+          assetId: meal.photoAssetId,
+          path: meal.photoPath,
+          thumbSize: WeeklySummaryShareCard.photoThumbSize,
+        );
+        return provider?.isReadable() ?? Future.value(false);
+      });
+
+  bool _sameMeals(List<Meal> a, List<Meal> b) {
+    if (identical(a, b)) return true;
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i].id != b[i].id ||
+          a[i].photoAssetId != b[i].photoAssetId ||
+          a[i].photoPath != b[i].photoPath) {
+        return false;
+      }
+    }
+    return true;
   }
 
   Widget _layout(List<Widget> tiles) {

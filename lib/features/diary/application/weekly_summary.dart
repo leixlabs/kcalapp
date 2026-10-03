@@ -7,6 +7,18 @@ DateTime weekStartFor(DateTime date) => DateTime(
   date.day,
 ).subtract(Duration(days: date.weekday - 1));
 
+/// 保持原顺序筛出可读取的照片记录，避免失效照片占用分享拼图名额。
+Future<List<Meal>> filterReadablePhotoMeals(
+  Iterable<Meal> meals,
+  Future<bool> Function(Meal meal) isReadable,
+) async {
+  final readable = <Meal>[];
+  for (final meal in meals) {
+    if (await isReadable(meal)) readable.add(meal);
+  }
+  return readable;
+}
+
 /// 该周饮食记录的指纹：天数、食物项数、热量与总重量任一变化都会改变它，
 /// 用于判断已持久化的周回顾是否过期。
 String weeklyMealSignature(Iterable<Meal> meals) {

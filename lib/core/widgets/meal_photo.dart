@@ -87,6 +87,19 @@ class MealPhotoProvider extends ImageProvider<MealPhotoProvider> {
     );
   }
 
+  /// 检查资源是否可读取且能解码成图片，供周回顾筛选拼图候选照片。
+  Future<bool> isReadable() async {
+    try {
+      final bytes = await _loadBytes(this);
+      if (bytes == null || bytes.isEmpty) return false;
+      final codec = await ui.instantiateImageCodec(bytes);
+      codec.dispose();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<ui.Codec> _decode(
     MealPhotoProvider key,
     ImageDecoderCallback decode,

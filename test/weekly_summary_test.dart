@@ -108,6 +108,33 @@ void main() {
       ]);
     });
 
+    test(
+      'filters unreadable photos while preserving chronological order',
+      () async {
+        final monday = DateTime(2026, 9, 28, 8);
+        final meals = [
+          _meal(monday, photoPath: '/unreadable.jpg'),
+          _meal(
+            monday.add(const Duration(minutes: 1)),
+            photoPath: '/readable-1.jpg',
+          ),
+          _meal(
+            monday.add(const Duration(minutes: 2)),
+            photoPath: '/readable-2.jpg',
+          ),
+        ];
+
+        final readable = await filterReadablePhotoMeals(meals, (meal) async {
+          return meal.photoPath != '/unreadable.jpg';
+        });
+
+        expect(readable.map((meal) => meal.photoPath), [
+          '/readable-1.jpg',
+          '/readable-2.jpg',
+        ]);
+      },
+    );
+
     test('signature changes when the week records change', () {
       final monday = DateTime(2026, 9, 28);
       final first = weeklyMealSignature([
