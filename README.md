@@ -2,6 +2,14 @@
 
 本地 AI 食物热量记录 App。拍下餐食，App 将图片与用户配置的多模态 LLM 服务交互，生成可编辑的食材、估算重量、热量和三大营养素；用户确认后，记录汇入当日饮食与长期趋势。
 
+<img width="590" height="1278" alt="IMG_5804" src="https://github.com/user-attachments/assets/446d0935-1480-4bdb-b44c-a5c1524ad4a3" />
+<img width="590" height="1278" alt="IMG_5805" src="https://github.com/user-attachments/assets/3bd82075-28a2-4cd3-925d-f1cee2626d89" />
+
+<img width="1083" height="3143" alt="IMG_5803" src="https://github.com/user-attachments/assets/6a017d04-459e-4500-a6f3-7def7f363f53" />
+
+<img width="590" height="1278" alt="IMG_5806" src="https://github.com/user-attachments/assets/730ece4f-46a3-442c-b94a-6f24230669b1" />
+
+
 ## 核心特性
 
 - 无用户账号，数据默认仅保存在设备本地
