@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -9,6 +11,7 @@ import '../../../../app/theme.dart';
 import '../../application/diary_providers.dart';
 import '../../../../core/utils/format_utils.dart';
 import '../../../../core/widgets/states.dart';
+import '../../../../core/widgets/tap_delight.dart';
 import 'widgets/calorie_ring.dart';
 import 'widgets/meal_section.dart';
 import '../../domain/daily_goal.dart';
@@ -293,10 +296,13 @@ class _HomePageState extends ConsumerState<HomePage> {
               ),
               const SizedBox(height: 8),
               Center(
-                child: CalorieRing(
-                  consumed: summary.consumed.kcal,
-                  target: summary.target?.kcal,
-                  hasGoal: hasGoal,
+                child: TapDelight(
+                  emojis: const ['🔥', '🍽️'],
+                  child: CalorieRing(
+                    consumed: summary.consumed.kcal,
+                    target: summary.target?.kcal,
+                    hasGoal: hasGoal,
+                  ),
                 ),
               ),
             ],
@@ -316,6 +322,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           target: summary.target?.carbsG,
           color: AppColors.carbs,
           icon: Icons.grain,
+          delightEmojis: const ['🍚', '🍞', '🍠'],
         ),
         const SizedBox(width: 12),
         _buildMacroItem(
@@ -325,6 +332,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           target: summary.target?.proteinG,
           color: AppColors.protein,
           icon: Icons.egg_outlined,
+          delightEmojis: const ['🥚', '🍗', '🐟'],
         ),
         const SizedBox(width: 12),
         _buildMacroItem(
@@ -334,6 +342,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           target: summary.target?.fatG,
           color: AppColors.fat,
           icon: Icons.water_drop_outlined,
+          delightEmojis: const ['🥑', '🧈', '🥜'],
         ),
       ],
     );
@@ -415,8 +424,10 @@ class _HomePageState extends ConsumerState<HomePage> {
                       ),
                     ),
                   ),
-                  data: (weeklyGrams) =>
-                      FoodCategoryProgressCard(weeklyGrams: weeklyGrams),
+                  data: (weeklyGrams) => TapDelight(
+                    emojis: TapDelight.foodEmojis,
+                    child: FoodCategoryProgressCard(weeklyGrams: weeklyGrams),
+                  ),
                 ),
               ],
             ),
@@ -456,88 +467,92 @@ class _HomePageState extends ConsumerState<HomePage> {
     required double? target,
     required Color color,
     required IconData icon,
+    required List<String> delightEmojis,
   }) {
     final theme = Theme.of(context);
     final hasTarget = target != null && target > 0;
     final progress = hasTarget ? (consumed / target).clamp(0.0, 1.0) : 0.0;
     return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, size: 13, color: theme.colorScheme.outline),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.outline,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 7),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                Flexible(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
+      child: TapDelight(
+        emojis: delightEmojis,
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(icon, size: 13, color: theme.colorScheme.outline),
+                  const SizedBox(width: 4),
+                  Expanded(
                     child: Text(
-                      FormatUtils.formatGramValue(consumed),
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: color,
-                        fontWeight: FontWeight.w800,
-                        fontFeatures: const [FontFeature.tabularFigures()],
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.outline,
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 3),
-                Text(
-                  'g',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.outline,
-                    fontWeight: FontWeight.w600,
+                ],
+              ),
+              const SizedBox(height: 7),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        FormatUtils.formatGramValue(consumed),
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          color: color,
+                          fontWeight: FontWeight.w800,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ),
                   ),
+                  const SizedBox(width: 3),
+                  Text(
+                    'g',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.outline,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 2),
+              Text(
+                hasTarget
+                    ? '目标 ${FormatUtils.formatGramValue(target)} g'
+                    : '未设目标',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.outline,
+                  fontSize: 10,
                 ),
-              ],
-            ),
-            const SizedBox(height: 2),
-            Text(
-              hasTarget
-                  ? '目标 ${FormatUtils.formatGramValue(target)} g'
-                  : '未设目标',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: theme.colorScheme.outline,
-                fontSize: 10,
               ),
-            ),
-            const SizedBox(height: 7),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: hasTarget ? progress : 0,
-                minHeight: 4,
-                backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                valueColor: AlwaysStoppedAnimation(color),
+              const SizedBox(height: 7),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: hasTarget ? progress : 0,
+                  minHeight: 4,
+                  backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                  valueColor: AlwaysStoppedAnimation(color),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -716,7 +731,6 @@ class _WeekDatePicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     // 本周一
     final monday = selectedDate.subtract(
       Duration(days: selectedDate.weekday - 1),
@@ -731,100 +745,259 @@ class _WeekDatePicker extends StatelessWidget {
         itemBuilder: (ctx, i) {
           final day = monday.add(Duration(days: i));
           final dayKey = DateTime(day.year, day.month, day.day);
-          final isSelected = FormatUtils.isSameDay(day, selectedDate);
-          final isToday = FormatUtils.isToday(day);
           final kcal = kcalByDay[dayKey] ?? 0;
-          final heat = _dayHeatFor(context, kcal, goalKcal);
+          return _WeekDayCell(
+            weekdayLabel: _weekLabels[i],
+            day: day,
+            kcal: kcal,
+            heat: _dayHeatFor(context, kcal, goalKcal),
+            isSelected: FormatUtils.isSameDay(day, selectedDate),
+            isToday: FormatUtils.isToday(day),
+            onTap: () => onDateSelected(day),
+          );
+        },
+      ),
+    );
+  }
+}
 
-          return Semantics(
-            button: true,
-            selected: isSelected,
-            label: kcal > 0
-                ? '${_weekLabels[i]}，${day.day}日，${kcal.round()}千卡'
-                : '${_weekLabels[i]}，${day.day}日，未记录',
-            child: GestureDetector(
-              onTap: () => onDateSelected(day),
+/// 单个周日期格。点击时给一个回弹缩放 + 震动反馈；没有记录的日子
+/// 额外冒出一个食物小图标，算作「点了也不会没反应」的彩蛋。
+class _WeekDayCell extends StatefulWidget {
+  final String weekdayLabel;
+  final DateTime day;
+  final double kcal;
+  final _DayHeat heat;
+  final bool isSelected;
+  final bool isToday;
+  final VoidCallback onTap;
+
+  const _WeekDayCell({
+    required this.weekdayLabel,
+    required this.day,
+    required this.kcal,
+    required this.heat,
+    required this.isSelected,
+    required this.isToday,
+    required this.onTap,
+  });
+
+  @override
+  State<_WeekDayCell> createState() => _WeekDayCellState();
+}
+
+class _WeekDayCellState extends State<_WeekDayCell>
+    with TickerProviderStateMixin {
+  static const _eggEmojis = [
+    '🍎',
+    '🥑',
+    '🍇',
+    '🍓',
+    '🥦',
+    '🍙',
+    '🥛',
+    '🍳',
+    '🥕',
+    '🍊',
+  ];
+
+  final math.Random _random = math.Random();
+
+  // 点击回弹：压一下再弹起，最后回正。
+  late final AnimationController _popController = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 330),
+  );
+  late final Animation<double> _popScale = TweenSequence<double>([
+    TweenSequenceItem(
+      tween: Tween(
+        begin: 1.0,
+        end: 0.9,
+      ).chain(CurveTween(curve: Curves.easeOut)),
+      weight: 28,
+    ),
+    TweenSequenceItem(
+      tween: Tween(
+        begin: 0.9,
+        end: 1.05,
+      ).chain(CurveTween(curve: Curves.easeOut)),
+      weight: 34,
+    ),
+    TweenSequenceItem(
+      tween: Tween(
+        begin: 1.05,
+        end: 1.0,
+      ).chain(CurveTween(curve: Curves.easeInOut)),
+      weight: 38,
+    ),
+  ]).animate(_popController);
+
+  // 彩蛋：食物小图标放大弹出后淡出。
+  late final AnimationController _eggController = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  );
+  late final Animation<double> _eggScale = TweenSequence<double>([
+    TweenSequenceItem(
+      tween: Tween(
+        begin: 0.2,
+        end: 1.15,
+      ).chain(CurveTween(curve: Curves.easeOutBack)),
+      weight: 35,
+    ),
+    TweenSequenceItem(
+      tween: Tween(
+        begin: 1.15,
+        end: 1.0,
+      ).chain(CurveTween(curve: Curves.easeOut)),
+      weight: 15,
+    ),
+    TweenSequenceItem(tween: ConstantTween(1.0), weight: 50),
+  ]).animate(_eggController);
+  late final Animation<double> _eggOpacity = TweenSequence<double>([
+    TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.0), weight: 12),
+    TweenSequenceItem(tween: ConstantTween(1.0), weight: 53),
+    TweenSequenceItem(
+      tween: Tween(
+        begin: 1.0,
+        end: 0.0,
+      ).chain(CurveTween(curve: Curves.easeIn)),
+      weight: 35,
+    ),
+  ]).animate(_eggController);
+
+  String _eggEmoji = _eggEmojis.first;
+  bool _showEgg = false;
+
+  @override
+  void dispose() {
+    _popController.dispose();
+    _eggController.dispose();
+    super.dispose();
+  }
+
+  void _handleTap() {
+    _popController.forward(from: 0);
+    if (widget.kcal <= 0) {
+      // 没有记录的日子点了也没内容可看，用一个食物图标彩蛋补上反馈。
+      HapticFeedback.lightImpact();
+      setState(() {
+        _showEgg = true;
+        _eggEmoji = _eggEmojis[_random.nextInt(_eggEmojis.length)];
+      });
+      _eggController.forward(from: 0);
+    } else {
+      HapticFeedback.selectionClick();
+    }
+    widget.onTap();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final heat = widget.heat;
+
+    return Semantics(
+      button: true,
+      selected: widget.isSelected,
+      label: widget.kcal > 0
+          ? '${widget.weekdayLabel}，${widget.day.day}日，${widget.kcal.round()}千卡'
+          : '${widget.weekdayLabel}，${widget.day.day}日，未记录',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: _handleTap,
+        child: ScaleTransition(
+          scale: _popScale,
+          child: Container(
+            width: 44,
+            margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 6),
+            padding: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              // 选中用主色描边，与底色之间留有间隙，底色再深也不会被盖住。
+              border: widget.isSelected
+                  ? Border.all(color: theme.colorScheme.primary, width: 2)
+                  : null,
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(11),
               child: Container(
-                width: 44,
-                margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 6),
-                padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
-                  // 选中用主色描边，与底色之间留有间隙，底色再深也不会被盖住。
-                  border: isSelected
-                      ? Border.all(color: theme.colorScheme.primary, width: 2)
-                      : null,
-                ),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: heat.background,
-                    borderRadius: BorderRadius.circular(11),
-                  ),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            _weekLabels[i],
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: heat.muted,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${day.day}',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              color: heat.foreground,
-                              fontWeight: (isSelected || isToday)
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          SizedBox(
-                            width: 40,
-                            height: 12,
-                            child: kcal > 0
-                                ? FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    child: Text(
-                                      kcal.round().toString(),
-                                      maxLines: 1,
-                                      style: theme.textTheme.labelSmall
-                                          ?.copyWith(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w600,
-                                            color: heat.muted,
-                                          ),
-                                    ),
-                                  )
-                                : null,
-                          ),
-                        ],
-                      ),
-                      // 今天：顶部小圆点标记。
-                      if (isToday)
-                        Positioned(
-                          top: 4,
-                          child: Container(
-                            width: 5,
-                            height: 5,
-                            decoration: BoxDecoration(
-                              color: heat.foreground,
-                              shape: BoxShape.circle,
-                            ),
+                decoration: BoxDecoration(color: heat.background),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          widget.weekdayLabel,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: heat.muted,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
-                    ],
-                  ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${widget.day.day}',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: heat.foreground,
+                            fontWeight: (widget.isSelected || widget.isToday)
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        SizedBox(
+                          width: 40,
+                          height: 12,
+                          child: widget.kcal > 0
+                              ? FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    widget.kcal.round().toString(),
+                                    maxLines: 1,
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: heat.muted,
+                                    ),
+                                  ),
+                                )
+                              : null,
+                        ),
+                      ],
+                    ),
+                    // 今天：顶部小圆点标记。
+                    if (widget.isToday)
+                      Positioned(
+                        top: 4,
+                        child: Container(
+                          width: 5,
+                          height: 5,
+                          decoration: BoxDecoration(
+                            color: heat.foreground,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                    // 彩蛋图层。
+                    if (_showEgg)
+                      FadeTransition(
+                        opacity: _eggOpacity,
+                        child: ScaleTransition(
+                          scale: _eggScale,
+                          child: Text(
+                            _eggEmoji,
+                            style: const TextStyle(fontSize: 18),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ),
-          );
-        },
+          ),
+        ),
       ),
     );
   }

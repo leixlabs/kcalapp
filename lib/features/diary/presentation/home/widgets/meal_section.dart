@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../../core/widgets/meal_photo.dart';
+import '../../../../../core/widgets/tap_delight.dart';
 import '../../../domain/meal.dart';
 import '../../../domain/meal_review.dart';
 import '../../../domain/meal_type.dart';
@@ -66,36 +67,39 @@ class MealSection extends StatelessWidget {
                     ),
                   ],
                 ),
-                RichText(
-                  text: TextSpan(
-                    children: [
-                      TextSpan(
-                        text: '${totalKcal.round()}',
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: theme.colorScheme.onSurface,
+                TapDelight(
+                  emojis: TapDelight.foodEmojis,
+                  child: RichText(
+                    text: TextSpan(
+                      children: [
+                        TextSpan(
+                          text: '${totalKcal.round()}',
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: theme.colorScheme.onSurface,
+                          ),
                         ),
-                      ),
-                      TextSpan(
-                        text: ' kcal',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.outline,
+                        TextSpan(
+                          text: ' kcal',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.outline,
+                          ),
                         ),
-                      ),
-                      TextSpan(
-                        text: '  ·  约 ',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.outlineVariant,
+                        TextSpan(
+                          text: '  ·  约 ',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.outlineVariant,
+                          ),
                         ),
-                      ),
-                      TextSpan(
-                        text: '${totalWeight.round()}g',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.outline,
-                          fontWeight: FontWeight.w500,
+                        TextSpan(
+                          text: '${totalWeight.round()}g',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.outline,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ],
