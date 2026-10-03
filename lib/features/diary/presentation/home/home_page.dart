@@ -11,6 +11,7 @@ import '../../../../core/utils/format_utils.dart';
 import '../../../../core/widgets/states.dart';
 import 'widgets/calorie_ring.dart';
 import 'widgets/meal_section.dart';
+import '../../domain/daily_goal.dart';
 import '../../domain/meal.dart';
 import '../../domain/meal_type.dart';
 import '../../../food_recognition/application/recognition_controller.dart';
@@ -36,6 +37,10 @@ class _HomePageState extends ConsumerState<HomePage> {
     final isToday = FormatUtils.isToday(selectedDate);
     final weekKcal =
         ref.watch(weeklyKcalProvider(selectedDate)).valueOrNull ?? const {};
+    // 本周生效的每日热量目标，用于周日期条的达成度配色。
+    final weekGoalKcal =
+        ref.watch(weeklyKcalGoalProvider(selectedDate)).valueOrNull ??
+        DailyGoal.recommendedKcal;
 
     return Scaffold(
       body: SafeArea(
@@ -76,6 +81,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 child: _WeekDatePicker(
                   selectedDate: selectedDate,
                   kcalByDay: weekKcal,
+                  goalKcal: weekGoalKcal,
                   onDateSelected: (day) {
                     ref.read(selectedDateProvider.notifier).state = day;
                     if (day.year != _focusedDay.year ||
@@ -696,11 +702,17 @@ class _WeekDatePicker extends StatelessWidget {
   final ValueChanged<DateTime> onDateSelected;
   final Map<DateTime, double> kcalByDay;
 
+  /// 本周生效的每日热量目标，用于达成度配色。
+  final double goalKcal;
+
   const _WeekDatePicker({
     required this.selectedDate,
     required this.onDateSelected,
     this.kcalByDay = const {},
+    this.goalKcal = 0,
   });
+
+  static const _weekLabels = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
 
   @override
   Widget build(BuildContext context) {
@@ -719,73 +731,96 @@ class _WeekDatePicker extends StatelessWidget {
         itemBuilder: (ctx, i) {
           final day = monday.add(Duration(days: i));
           final dayKey = DateTime(day.year, day.month, day.day);
-          final isSelected =
-              day.year == selectedDate.year &&
-              day.month == selectedDate.month &&
-              day.day == selectedDate.day;
+          final isSelected = FormatUtils.isSameDay(day, selectedDate);
           final isToday = FormatUtils.isToday(day);
           final kcal = kcalByDay[dayKey] ?? 0;
-          const weekLabels = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+          final heat = _dayHeatFor(context, kcal, goalKcal);
 
-          return GestureDetector(
-            onTap: () => onDateSelected(day),
-            child: Container(
-              width: 44,
-              margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 6),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? theme.colorScheme.primary
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    weekLabels[i],
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: isSelected
-                          ? theme.colorScheme.onPrimary
-                          : theme.colorScheme.outline,
-                      fontWeight: FontWeight.w500,
-                    ),
+          return Semantics(
+            button: true,
+            selected: isSelected,
+            label: kcal > 0
+                ? '${_weekLabels[i]}，${day.day}日，${kcal.round()}千卡'
+                : '${_weekLabels[i]}，${day.day}日，未记录',
+            child: GestureDetector(
+              onTap: () => onDateSelected(day),
+              child: Container(
+                width: 44,
+                margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 6),
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  // 选中用主色描边，与底色之间留有间隙，底色再深也不会被盖住。
+                  border: isSelected
+                      ? Border.all(color: theme.colorScheme.primary, width: 2)
+                      : null,
+                ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: heat.background,
+                    borderRadius: BorderRadius.circular(11),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${day.day}',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: isSelected
-                          ? theme.colorScheme.onPrimary
-                          : isToday
-                          ? theme.colorScheme.primary
-                          : theme.colorScheme.onSurface,
-                      fontWeight: (isSelected || isToday)
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  SizedBox(
-                    width: 40,
-                    height: 12,
-                    child: kcal > 0
-                        ? FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text(
-                              kcal.round().toString(),
-                              maxLines: 1,
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: isSelected
-                                    ? theme.colorScheme.onPrimary
-                                    : theme.colorScheme.primary,
-                              ),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            _weekLabels[i],
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: heat.muted,
+                              fontWeight: FontWeight.w500,
                             ),
-                          )
-                        : null,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${day.day}',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: heat.foreground,
+                              fontWeight: (isSelected || isToday)
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          SizedBox(
+                            width: 40,
+                            height: 12,
+                            child: kcal > 0
+                                ? FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(
+                                      kcal.round().toString(),
+                                      maxLines: 1,
+                                      style: theme.textTheme.labelSmall
+                                          ?.copyWith(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w600,
+                                            color: heat.muted,
+                                          ),
+                                    ),
+                                  )
+                                : null,
+                          ),
+                        ],
+                      ),
+                      // 今天：顶部小圆点标记。
+                      if (isToday)
+                        Positioned(
+                          top: 4,
+                          child: Container(
+                            width: 5,
+                            height: 5,
+                            decoration: BoxDecoration(
+                              color: heat.foreground,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           );
@@ -793,4 +828,66 @@ class _WeekDatePicker extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 周日期条的达成度配色：底色 + 与之对比的前景 / 次要文字色。
+class _DayHeat {
+  final Color background;
+  final Color foreground;
+  final Color muted;
+
+  const _DayHeat({
+    required this.background,
+    required this.foreground,
+    required this.muted,
+  });
+}
+
+/// 按「当日摄入 / 每日目标」的达成度分档取底色，形成类似 GitHub 热力图的
+/// 深浅变化；前景色取与底色对比更高的一侧，保证文字清晰、不撞色。
+_DayHeat _dayHeatFor(BuildContext context, double kcal, double goalKcal) {
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+
+  // 未记录：中性底 + 次要文字色。
+  if (kcal <= 0) {
+    final background = isDark
+        ? const Color(0xFF2A322C)
+        : const Color(0xFFEDF0EC);
+    final foreground = isDark
+        ? const Color(0xFF97A59A)
+        : const Color(0xFF6B7A70);
+    return _DayHeat(
+      background: background,
+      foreground: foreground,
+      muted: foreground.withValues(alpha: 0.8),
+    );
+  }
+
+  final ratio = goalKcal <= 0 ? 1.0 : kcal / goalKcal;
+  final Color background;
+  if (ratio < 0.5) {
+    background = isDark ? const Color(0xFF23392B) : const Color(0xFFD8ECDD);
+  } else if (ratio < 0.85) {
+    background = isDark ? const Color(0xFF2A5E3B) : const Color(0xFF9FD4AE);
+  } else if (ratio <= 1.1) {
+    background = isDark ? const Color(0xFF2E7D4F) : const Color(0xFF4CAF73);
+  } else {
+    background = isDark ? const Color(0xFF9A6430) : const Color(0xFFE2A15A);
+  }
+
+  final foreground = _bestForeground(background);
+  return _DayHeat(
+    background: background,
+    foreground: foreground,
+    muted: foreground.withValues(alpha: 0.78),
+  );
+}
+
+/// 在深色墨与白色之间取与底色对比更高者作为文字色。
+Color _bestForeground(Color background) {
+  const darkInk = Color(0xFF1F2D24);
+  final luminance = background.computeLuminance();
+  final whiteContrast = 1.05 / (luminance + 0.05);
+  final darkContrast = (luminance + 0.05) / (darkInk.computeLuminance() + 0.05);
+  return whiteContrast >= darkContrast ? Colors.white : darkInk;
 }
