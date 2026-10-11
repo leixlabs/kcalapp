@@ -4,6 +4,7 @@ import 'package:table_calendar/table_calendar.dart';
 
 import '../../application/diary_providers.dart';
 import '../../../../core/utils/format_utils.dart';
+import '../../../../l10n/l10n.dart';
 
 class CalendarDrawer extends ConsumerWidget {
   final DateTime selectedDate;
@@ -36,7 +37,9 @@ class CalendarDrawer extends ConsumerWidget {
             ),
             error: (error, _) => Padding(
               padding: const EdgeInsets.all(24),
-              child: Text('日历加载失败: $error'),
+              child: Text(
+                AppLocalizations.of(context)!.calendarError('$error'),
+              ),
             ),
             data: (kcalMap) {
               return TableCalendar(
@@ -50,7 +53,7 @@ class CalendarDrawer extends ConsumerWidget {
                   onDateSelected(selected);
                 },
                 onPageChanged: onFocusedDayChanged,
-                locale: 'zh_CN',
+                locale: Localizations.localeOf(context).toLanguageTag(),
                 rowHeight: 54,
                 daysOfWeekHeight: 24,
                 calendarStyle: CalendarStyle(
@@ -74,13 +77,13 @@ class CalendarDrawer extends ConsumerWidget {
                 ),
                 calendarBuilders: CalendarBuilders(
                   defaultBuilder: (context, day, _) =>
-                      _buildDayCell(theme, day, kcalMap),
+                      _buildDayCell(context, theme, day, kcalMap),
                   selectedBuilder: (context, day, _) =>
-                      _buildDayCell(theme, day, kcalMap, isSelected: true),
+                      _buildDayCell(context, theme, day, kcalMap, isSelected: true),
                   todayBuilder: (context, day, _) =>
-                      _buildDayCell(theme, day, kcalMap, isToday: true),
+                      _buildDayCell(context, theme, day, kcalMap, isToday: true),
                   outsideBuilder: (context, day, _) =>
-                      _buildDayCell(theme, day, kcalMap, isOutside: true),
+                      _buildDayCell(context, theme, day, kcalMap, isOutside: true),
                 ),
               );
             },
@@ -91,6 +94,7 @@ class CalendarDrawer extends ConsumerWidget {
   }
 
   Widget _buildDayCell(
+    BuildContext context,
     ThemeData theme,
     DateTime day,
     Map<DateTime, double> kcalMap, {
@@ -109,7 +113,12 @@ class CalendarDrawer extends ConsumerWidget {
 
     return Semantics(
       container: true,
-      label: hasKcal ? '${day.day}日，${kcal.round()}千卡' : '${day.day}日',
+      label: hasKcal
+          ? (context.l10n.calendarDayKcal(
+              '${day.day}',
+              '${kcal.round()}',
+            ))
+          : context.l10n.calendarDayOnly('${day.day}'),
       button: true,
       selected: isSelected,
       child: Center(

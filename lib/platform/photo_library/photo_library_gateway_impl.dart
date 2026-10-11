@@ -7,8 +7,8 @@ import 'photo_library_gateway.dart';
 
 /// 基于 `photo_manager` 的实现：照片保存进系统相册的「食刻」相册。
 class PhotoLibraryGatewayImpl implements PhotoLibraryGateway {
-  /// 专属相册名；用户在系统相册里能直接找到。
-  static const albumName = '食刻';
+  /// 专属相册名；用户在系统相册里能直接找到。语言无关，沿用 App 英文名。
+  static const albumName = 'Calory';
 
   bool get _isDarwin => Platform.isIOS || Platform.isMacOS;
 

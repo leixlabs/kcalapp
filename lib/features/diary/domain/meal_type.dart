@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 
-enum MealType {
-  breakfast('早餐'),
-  lunch('午餐'),
-  dinner('晚餐'),
-  snack('加餐');
+import '../../../l10n/l10n.dart';
 
-  const MealType(this.label);
-  final String label;
+enum MealType {
+  breakfast,
+  lunch,
+  dinner,
+  snack;
 
   IconData get icon {
     switch (this) {
@@ -29,13 +28,6 @@ enum MealType {
     );
   }
 
-  static MealType? fromLabel(String label) {
-    for (final t in MealType.values) {
-      if (t.label == label) return t;
-    }
-    return null;
-  }
-
   static MealType guessFromHour(int hour) {
     if (hour >= 5 && hour < 10) return MealType.breakfast;
     if (hour >= 10 && hour < 14) return MealType.lunch;
@@ -43,3 +35,11 @@ enum MealType {
     return MealType.snack;
   }
 }
+
+/// [MealType] 的本地化显示名。
+String mealTypeLabel(AppLocalizations l10n, MealType type) => switch (type) {
+  MealType.breakfast => l10n.mealTypeBreakfast,
+  MealType.lunch => l10n.mealTypeLunch,
+  MealType.dinner => l10n.mealTypeDinner,
+  MealType.snack => l10n.mealTypeSnack,
+};

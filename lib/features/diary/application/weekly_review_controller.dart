@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/providers.dart';
+import '../../../l10n/l10n.dart';
 import '../domain/weekly_review.dart';
 import 'diary_providers.dart';
 import 'weekly_summary.dart';
@@ -14,7 +15,7 @@ class WeeklyReviewController {
   final Ref _ref;
   WeeklyReviewController(this._ref);
 
-  Future<void> ensure(DateTime selectedDate) async {
+  Future<void> ensure(DateTime selectedDate, AppLocalizations l10n) async {
     final meals = await _ref.read(weeklyMealsProvider(selectedDate).future);
     if (meals.isEmpty) return;
 
@@ -41,9 +42,10 @@ class WeeklyReviewController {
             apiKey: apiKey,
             weekStart: weekStart,
             meals: meals,
+            language: l10n.localeName,
           );
       final improvement = narrative.improvement.isEmpty
-          ? WeeklySummary(weekStart: weekStart, meals: meals).nextWeekFocus
+          ? WeeklySummary(weekStart: weekStart, meals: meals).nextWeekFocus(l10n)
           : narrative.improvement;
       await dao.upsert(
         WeeklyReview(
@@ -64,6 +66,7 @@ class WeeklyReviewController {
   Future<void> editImprovement(
     DateTime selectedDate,
     String improvement,
+    AppLocalizations l10n,
   ) async {
     final weekStart = weekStartFor(selectedDate);
     final dao = _ref.read(weeklyReviewDaoProvider);
@@ -73,7 +76,7 @@ class WeeklyReviewController {
     await dao.upsert(
       WeeklyReview(
         weekStart: weekStart,
-        happened: stored?.happened ?? summary.happenedSummary,
+        happened: stored?.happened ?? summary.happenedSummary(l10n),
         improvement: improvement,
         signature: stored != null && stored.signature.isNotEmpty
             ? stored.signature

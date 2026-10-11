@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/providers.dart';
 import '../../../data/llm/llm_adapter.dart';
+import '../../../l10n/l10n.dart';
 import '../domain/meal_review.dart';
 import '../domain/meal_type.dart';
 import 'diary_providers.dart';
@@ -19,7 +20,11 @@ class MealReviewController {
   ///
   /// 先标记为刷新中并保留上一次评价内容（避免空白），随后在后台请求 LLM；
   /// 成功则原位替换，失败则保留旧内容并标记失败。
-  Future<void> refresh(DateTime date, MealType mealType) async {
+  Future<void> refresh(
+    DateTime date,
+    MealType mealType,
+    AppLocalizations l10n,
+  ) async {
     final dao = _ref.read(mealReviewDaoProvider);
     final existing = await dao.get(date, mealType);
     final key = mealReviewKey(date, mealType);
@@ -41,7 +46,7 @@ class MealReviewController {
           ? null
           : await _ref.read(secureStoreProvider).read('${profile.id}');
       if (profile == null || apiKey == null || apiKey.isEmpty) {
-        throw const MealReviewGenerationException('请先在设置中配置 LLM 服务');
+        throw MealReviewGenerationException(l10n.mealRecognizeConfigureLlm);
       }
 
       final meals = await _ref
@@ -71,6 +76,7 @@ class MealReviewController {
             apiKey: apiKey,
             mealType: _toHint(mealType),
             meals: group,
+            language: l10n.localeName,
           );
       await dao.upsert(
         MealReview(
@@ -97,10 +103,10 @@ class MealReviewController {
   }
 
   /// 便捷入口：按餐食 id 触发其所属餐次的评价刷新。
-  Future<void> refreshForMeal(int mealId) async {
+  Future<void> refreshForMeal(int mealId, AppLocalizations l10n) async {
     final meal = await _ref.read(mealRepositoryProvider).getMealById(mealId);
     if (meal == null) return;
-    await refresh(meal.dateTime, meal.mealType);
+    await refresh(meal.dateTime, meal.mealType, l10n);
   }
 
   MealTypeHint _toHint(MealType type) => MealTypeHint.values.firstWhere(

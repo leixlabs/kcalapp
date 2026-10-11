@@ -1,14 +1,18 @@
+import '../../../l10n/l10n.dart';
+
 enum LlmResponseFormat {
   none,
   jsonMode,
   jsonSchema;
-
-  String get label => switch (this) {
-    LlmResponseFormat.none => '关闭结构化输出',
-    LlmResponseFormat.jsonMode => 'JSON Mode',
-    LlmResponseFormat.jsonSchema => 'JSON Schema',
-  };
 }
+
+/// [LlmResponseFormat] 的本地化显示名。
+String responseFormatLabel(AppLocalizations l10n, LlmResponseFormat format) =>
+    switch (format) {
+      LlmResponseFormat.none => l10n.llmFormatNone,
+      LlmResponseFormat.jsonMode => l10n.llmFormatJsonMode,
+      LlmResponseFormat.jsonSchema => l10n.llmFormatJsonSchema,
+    };
 
 class LlmProfile {
   final int? id;

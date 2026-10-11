@@ -6,6 +6,11 @@
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>zh-Hans</string>
+	</array>
 	<key>CFBundleDisplayName</key>
 	<string>Calory</string>
 	<key>CFBundleExecutable</key>
@@ -30,10 +35,10 @@
 	<string>需要使用相机拍照以识别食物热量与营养</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>用于在局域网中向你授权的设备提供只读饮食数据接口</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>需要访问相册以选择食物照片进行识别</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>需要保存食物照片到相册</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>需要访问相册以选择食物照片进行识别</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

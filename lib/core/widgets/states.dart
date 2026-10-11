@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/l10n.dart';
+
 class EmptyState extends StatelessWidget {
   final String title;
   final String? subtitle;
@@ -68,7 +70,10 @@ class ErrorStateView extends StatelessWidget {
             Text(message, style: theme.textTheme.bodyMedium, textAlign: TextAlign.center),
             if (onRetry != null) ...[
               const SizedBox(height: 16),
-              FilledButton.tonal(onPressed: onRetry, child: const Text('重试')),
+              FilledButton.tonal(
+                onPressed: onRetry,
+                child: Text(context.l10n.retry),
+              ),
             ],
           ],
         ),

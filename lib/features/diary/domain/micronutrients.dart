@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import '../../../l10n/l10n.dart';
+
 // ─────────────────────────────────────────────
 // Mineral（矿物质）8 个，按位固定顺序 index 0-7
 // ─────────────────────────────────────────────
@@ -18,8 +20,6 @@ enum Mineral {
   sodium, // 9 钠  Na  mg
   magnesium; // 10 镁 Mg  mg
 
-  String get label =>
-      const ['铁', '锌', '铜', '硒', '碘', '钼', '铬', '钴', '钙', '钠', '镁'][index];
   String get symbol => const [
     'Fe',
     'Zn',
@@ -38,6 +38,22 @@ enum Mineral {
   bool get isUg => index >= 3 && index <= 7;
   String get unit => isUg ? 'μg' : 'mg';
 }
+
+/// [Mineral] 的本地化显示名。
+String mineralLabel(AppLocalizations l10n, Mineral mineral) =>
+    switch (mineral) {
+      Mineral.iron => l10n.mineralIron,
+      Mineral.zinc => l10n.mineralZinc,
+      Mineral.copper => l10n.mineralCopper,
+      Mineral.selenium => l10n.mineralSelenium,
+      Mineral.iodine => l10n.mineralIodine,
+      Mineral.molybdenum => l10n.mineralMolybdenum,
+      Mineral.chromium => l10n.mineralChromium,
+      Mineral.cobalt => l10n.mineralCobalt,
+      Mineral.calcium => l10n.mineralCalcium,
+      Mineral.sodium => l10n.mineralSodium,
+      Mineral.magnesium => l10n.mineralMagnesium,
+    };
 
 // ─────────────────────────────────────────────
 // Vitamin（维生素）13 个，按位固定顺序 index 0-12
@@ -75,21 +91,25 @@ enum Vitamin {
     'VK',
   ][index];
 
-  String get fullLabel => const [
-    '维生素A',
-    '维生素B1',
-    '维生素B2',
-    '维生素B3(烟酸)',
-    '维生素B5',
-    '维生素B6',
-    '维生素B7(生物素)',
-    '维生素B9(叶酸)',
-    '维生素B12',
-    '维生素C',
-    '维生素D',
-    '维生素E',
-    '维生素K',
-  ][index];
+  /// 语言无关的短名（A/B1/B2…），用于格子内副标签。
+  String get shortLabel =>
+      const ['A', 'B1', 'B2', 'B3', 'B5', 'B6', 'B7', 'B9', 'B12', 'C', 'D', 'E', 'K'][index];
+
+  String fullLabel(AppLocalizations l10n) => switch (this) {
+    Vitamin.a => l10n.vitaminA,
+    Vitamin.b1 => l10n.vitaminB1,
+    Vitamin.b2 => l10n.vitaminB2,
+    Vitamin.b3 => l10n.vitaminB3,
+    Vitamin.b5 => l10n.vitaminB5,
+    Vitamin.b6 => l10n.vitaminB6,
+    Vitamin.b7 => l10n.vitaminB7,
+    Vitamin.b9 => l10n.vitaminB9,
+    Vitamin.b12 => l10n.vitaminB12,
+    Vitamin.c => l10n.vitaminC,
+    Vitamin.d => l10n.vitaminD,
+    Vitamin.e => l10n.vitaminE,
+    Vitamin.k => l10n.vitaminK,
+  };
 
   /// μg 级维生素：A/B7/B9/B12/D/K
   bool get isUg => const {0, 6, 7, 8, 10, 12}.contains(index);

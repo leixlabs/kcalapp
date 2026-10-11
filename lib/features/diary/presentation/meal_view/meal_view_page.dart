@@ -9,6 +9,7 @@ import '../../../../app/theme.dart';
 import '../../../../core/utils/format_utils.dart';
 import '../../../../core/widgets/meal_photo.dart';
 import '../../../../core/widgets/ruler_value_picker.dart';
+import '../../../../l10n/l10n.dart';
 import '../../domain/meal.dart';
 import '../../domain/food_item.dart';
 import '../../domain/meal_type.dart';
@@ -54,22 +55,23 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
 
   Future<void> _deleteMeal() async {
     if (_meal?.id == null) return;
+    final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('删除记录'),
-        content: const Text('确定要删除这条饮食记录吗？'),
+        title: Text(l10n.mealViewDeleteTitle),
+        content: Text(l10n.mealViewDeleteConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('取消'),
+            child: Text(l10n.actionCancel),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('删除'),
+            child: Text(l10n.actionDelete),
           ),
         ],
       ),
@@ -85,7 +87,7 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
         unawaited(
           ref
               .read(mealReviewControllerProvider)
-              .refresh(meal.dateTime, meal.mealType),
+              .refresh(meal.dateTime, meal.mealType, context.l10n),
         );
       }
       if (mounted) context.pop();
@@ -102,8 +104,8 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
     }
     if (_meal == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('记录详情')),
-        body: const Center(child: Text('记录不存在')),
+        appBar: AppBar(title: Text(context.l10n.mealViewTitle)),
+        body: Center(child: Text(context.l10n.mealViewNotFound)),
       );
     }
 
@@ -140,7 +142,7 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
                     color: Colors.white,
                   ),
                 ),
-                tooltip: '删除',
+                tooltip: context.l10n.actionDelete,
                 onPressed: _deleteMeal,
               ),
             ],
@@ -194,7 +196,7 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
                             .map(
                               (type) => DropdownMenuItem(
                                 value: type,
-                                child: Text(type.label),
+                                child: Text(mealTypeLabel(context.l10n, type)),
                               ),
                             )
                             .toList(),
@@ -241,7 +243,7 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                '总热量',
+                                context.l10n.mealViewTotalCalories,
                                 style: theme.textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -277,7 +279,7 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
                           children: [
                             _bigStat(
                               context,
-                              label: '碳水',
+                              label: context.l10n.macroCarbs,
                               value: FormatUtils.formatGramValue(
                                 nutrition.carbsG,
                               ),
@@ -288,7 +290,7 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
                             ),
                             _bigStat(
                               context,
-                              label: '蛋白质',
+                              label: context.l10n.macroProtein,
                               value: FormatUtils.formatGramValue(
                                 nutrition.proteinG,
                               ),
@@ -299,7 +301,7 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
                             ),
                             _bigStat(
                               context,
-                              label: '脂肪',
+                              label: context.l10n.macroFat,
                               value: FormatUtils.formatGramValue(
                                 nutrition.fatG,
                               ),
@@ -321,13 +323,13 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        '食材 (kcal)',
+                        context.l10n.mealViewFoodsKcal,
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
                       ),
                       Text(
-                        '点击食材修改名字和卡路里',
+                        context.l10n.mealViewFoodsHint,
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.outline,
                         ),
@@ -349,7 +351,7 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
                   vertical: 12,
                 ),
                 child: Text(
-                  '暂无食材信息',
+                  context.l10n.mealViewNoFoods,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.outline,
                   ),
@@ -438,6 +440,7 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
   }
 
   Widget _buildMealReviewLink(Meal meal, ThemeData theme) {
+    final l10n = context.l10n;
     final reviewAsync = ref.watch(
       mealReviewProvider(mealReviewKey(meal.dateTime, meal.mealType)),
     );
@@ -457,13 +460,15 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
         0,
         (sum, m) => sum + m.foodItems.length,
       );
-      hint = content ?? '正在根据 $foodCount 项食物更新评价…';
+      hint = content ?? l10n.mealReviewUpdating(foodCount);
     } else if (review?.status == MealReviewStatus.failed && content == null) {
-      hint = '评价生成失败，点击重新生成';
+      hint = l10n.mealSectionReviewFailed;
     } else if (content != null && content.isNotEmpty) {
       hint = content;
     } else {
-      hint = '${meal.mealType.label}营养评价会根据全部食物生成。';
+      hint = l10n.mealViewReviewWillUseAll(
+        mealTypeLabel(context.l10n, meal.mealType),
+      );
     }
 
     return Container(
@@ -496,7 +501,10 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    '已计入${meal.mealType.label}（共 ${totalKcal.round()} kcal）',
+                    context.l10n.mealViewCountedIn(
+                      mealTypeLabel(context.l10n, meal.mealType),
+                      totalKcal.round().toString(),
+                    ),
                     style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
@@ -521,7 +529,7 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  '查看完整评价',
+                  context.l10n.mealViewViewFullReview,
                   style: theme.textTheme.labelMedium?.copyWith(
                     color: theme.colorScheme.primary,
                   ),
@@ -576,7 +584,7 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '营养物质 (mg/μg)',
+            context.l10n.mealViewNutrients,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w700,
             ),
@@ -590,11 +598,11 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
                   (item) => item.getMineral(mineral),
                 );
                 return _MicronutrientValue(
-                  label: mineral.label,
+                  label: mineralLabel(context.l10n, mineral),
                   value: _sumKnownValues(values) * meal.servings,
                   unit: mineral.unit,
                   onTap: () => _editMicronutrient(
-                    mineral.label,
+                    mineralLabel(context.l10n, mineral),
                     mineral.unit,
                     _sumKnownValues(
                       meal.foodItems.map((item) => item.getMineral(mineral)),
@@ -608,7 +616,7 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
           if (vitamins.isNotEmpty) ...[
             const SizedBox(height: 16),
             Text(
-              '维生素',
+              context.l10n.recognitionVitamins,
               style: theme.textTheme.labelLarge?.copyWith(
                 color: theme.colorScheme.outline,
               ),
@@ -621,11 +629,11 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
                   meal.foodItems.map((item) => item.getVitamin(vitamin)),
                 );
                 return _MicronutrientValue(
-                  label: vitamin.fullLabel,
+                  label: vitamin.fullLabel(context.l10n),
                   value: perServing * meal.servings,
                   unit: vitamin.unit,
                   onTap: () => _editMicronutrient(
-                    vitamin.fullLabel,
+                    vitamin.fullLabel(context.l10n),
                     vitamin.unit,
                     perServing,
                     (value) => _scaleVitamin(vitamin, value),
@@ -698,24 +706,25 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
 
   Future<void> _editMealName() async {
     final meal = _meal!;
+    final l10n = context.l10n;
     final controller = TextEditingController(text: meal.name);
     final saved = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('修改餐名'),
+        title: Text(l10n.mealViewEditMealName),
         content: TextField(
           controller: controller,
           autofocus: true,
-          decoration: const InputDecoration(labelText: '餐名'),
+          decoration: InputDecoration(labelText: l10n.mealViewMealName),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('取消'),
+            child: Text(l10n.actionCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('保存'),
+            child: Text(l10n.actionSave),
           ),
         ],
       ),
@@ -728,6 +737,7 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
 
   Future<void> _editFoodItem(int index) async {
     final meal = _meal!;
+    final l10n = context.l10n;
     final item = meal.foodItems[index];
     final nameController = TextEditingController(text: item.name);
     final kcalController = TextEditingController(
@@ -736,18 +746,18 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
     final saved = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('修改食材'),
+        title: Text(l10n.mealViewEditFood),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: nameController,
-              decoration: const InputDecoration(labelText: '食材名称'),
+              decoration: InputDecoration(labelText: l10n.mealViewFoodName),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: kcalController,
-              decoration: const InputDecoration(labelText: '热量 (kcal)'),
+              decoration: InputDecoration(labelText: l10n.recognitionKcalLabel),
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
@@ -757,11 +767,11 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('取消'),
+            child: Text(l10n.actionCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('保存'),
+            child: Text(l10n.actionSave),
           ),
         ],
       ),
@@ -770,8 +780,9 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
       final kcal = double.tryParse(kcalController.text);
       final name = nameController.text.trim();
       if (kcal == null || kcal < 0 || name.isEmpty) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('请填写有效的食材名称和热量')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.mealViewInvalidFood)),
+        );
       } else {
         final items = [...meal.foodItems];
         items[index] = item.copyWith(name: name, kcal: kcal);
@@ -798,10 +809,10 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
       _EditableNutrient.fat => nutrition.fatG / meal.servings,
     };
     final label = switch (nutrient) {
-      _EditableNutrient.kcal => '热量',
-      _EditableNutrient.carbs => '碳水',
-      _EditableNutrient.protein => '蛋白质',
-      _EditableNutrient.fat => '脂肪',
+      _EditableNutrient.kcal => context.l10n.nutrientCalories,
+      _EditableNutrient.carbs => context.l10n.macroCarbs,
+      _EditableNutrient.protein => context.l10n.macroProtein,
+      _EditableNutrient.fat => context.l10n.macroFat,
     };
     final color = switch (nutrient) {
       _EditableNutrient.kcal => Theme.of(context).colorScheme.primary,
@@ -852,7 +863,10 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('修改$label', style: Theme.of(ctx).textTheme.headlineSmall),
+                Text(
+                  context.l10n.editValue(label),
+                  style: Theme.of(ctx).textTheme.headlineSmall,
+                ),
                 const SizedBox(height: 18),
                 RulerValuePicker(
                   value: value,
@@ -873,7 +887,7 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
                       shape: const StadiumBorder(),
                     ),
                     onPressed: () => Navigator.pop(ctx, value),
-                    child: const Text('保存'),
+                    child: Text(context.l10n.actionSave),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -922,27 +936,28 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
     double currentValue,
     Future<void> Function(double) onSave,
   ) async {
+    final l10n = context.l10n;
     final controller = TextEditingController(
       text: currentValue.toStringAsFixed(1),
     );
     final saved = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('修改$label'),
+        title: Text(l10n.editValue(label)),
         content: TextField(
           controller: controller,
           autofocus: true,
-          decoration: InputDecoration(labelText: '含量 ($unit)'),
+          decoration: InputDecoration(labelText: l10n.mealViewContentLabel(unit)),
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('取消'),
+            child: Text(l10n.actionCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('保存'),
+            child: Text(l10n.actionSave),
           ),
         ],
       ),
@@ -950,8 +965,9 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
     if (saved == true && mounted) {
       final value = double.tryParse(controller.text);
       if (value == null || value < 0) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('请输入有效的营养素含量')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.mealViewInvalidNutrient)),
+        );
       } else {
         await onSave(value);
       }
@@ -1018,8 +1034,9 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
         _refreshReviewsAfterEdit(previous, mealToSave);
       } catch (error) {
         if (mounted) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text('保存失败: $error')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(context.l10n.mealViewSaveFailed('$error'))),
+          );
         }
       }
     });
@@ -1027,6 +1044,7 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
   }
 
   void _refreshReviewsAfterEdit(Meal? previous, Meal current) {
+    final l10n = context.l10n;
     final controller = ref.read(mealReviewControllerProvider);
     final keys = <({DateTime date, MealType mealType})>{};
     if (previous != null) {
@@ -1034,7 +1052,7 @@ class _MealViewPageState extends ConsumerState<MealViewPage> {
     }
     keys.add((date: current.dateTime, mealType: current.mealType));
     for (final key in keys) {
-      unawaited(controller.refresh(key.date, key.mealType));
+      unawaited(controller.refresh(key.date, key.mealType, l10n));
     }
   }
 }
@@ -1081,7 +1099,7 @@ class _FoodItemRow extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  tooltip: '删除食材',
+                  tooltip: context.l10n.mealViewDeleteFood,
                   onPressed: onDelete,
                   icon: Icon(
                     Icons.close,

@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../../../core/widgets/meal_photo.dart';
+import '../../../../../core/utils/format_utils.dart';
+import '../../../../../l10n/l10n.dart';
 import '../../../application/weekly_summary.dart';
 import '../../../domain/food_category.dart';
 import '../../../domain/meal.dart';
@@ -74,7 +76,7 @@ class WeeklySummaryShareCard extends StatelessWidget {
                 children: [
                   _AverageKcalCard(averageKcal: averageKcal),
                   const SizedBox(height: 18),
-                  const _SectionLabel('每日达成'),
+                  _SectionLabel(context.l10n.shareCardDailyAchievement),
                   const SizedBox(height: 8),
                   _WeeklyHeatmap(
                     weekStart: summary.weekStart,
@@ -82,7 +84,7 @@ class WeeklySummaryShareCard extends StatelessWidget {
                     goalKcal: dailyKcalGoal,
                   ),
                   const SizedBox(height: 20),
-                  const _SectionLabel('食物类别 · 本周'),
+                  _SectionLabel(context.l10n.shareCardFoodCategories),
                   const SizedBox(height: 10),
                   FoodCategoryProgressCard(
                     weeklyGrams: summary.foodCategoryGrams,
@@ -93,10 +95,14 @@ class WeeklySummaryShareCard extends StatelessWidget {
                     categoryColor: _shareCategoryColor,
                   ),
                   const SizedBox(height: 20),
-                  _NarrativeSection(label: '本周锐评', text: happened, maxLines: 3),
+                  _NarrativeSection(
+                    label: context.l10n.shareCardHotTake,
+                    text: happened,
+                    maxLines: 3,
+                  ),
                   const SizedBox(height: 14),
                   _NarrativeSection(
-                    label: '饮食建议',
+                    label: context.l10n.shareCardAdvice,
                     text: improvement,
                     maxLines: 2,
                   ),
@@ -124,11 +130,11 @@ class _ShareTitleHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.fromLTRB(20, 36, 20, 16),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 36, 20, 16),
       child: Text(
-        '本周饮食回顾',
-        style: TextStyle(
+        context.l10n.shareCardTitle,
+        style: const TextStyle(
           color: WeeklySummaryShareCard._ink,
           fontSize: 24,
           fontWeight: FontWeight.w800,
@@ -144,13 +150,13 @@ class _ShareFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.fromLTRB(20, 14, 20, 30),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 30),
       child: Align(
         alignment: Alignment.centerRight,
         child: Text(
-          '生成自 kcalapp',
-          style: TextStyle(
+          context.l10n.shareCardGeneratedBy,
+          style: const TextStyle(
             color: WeeklySummaryShareCard._mutedInk,
             fontSize: 10,
             fontWeight: FontWeight.w600,
@@ -170,10 +176,6 @@ class _PeriodHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final start = '${weekStart.year}年${weekStart.month}月${weekStart.day}日';
-    final end = weekStart.year == periodEnd.year
-        ? '${periodEnd.month}月${periodEnd.day}日'
-        : '${periodEnd.year}年${periodEnd.month}月${periodEnd.day}日';
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 10),
       child: Row(
@@ -186,7 +188,7 @@ class _PeriodHeader extends StatelessWidget {
           const SizedBox(width: 6),
           Expanded(
             child: Text(
-              '$start – $end',
+              FormatUtils.formatWeekRange(weekStart, periodEnd),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
@@ -221,9 +223,9 @@ class _AverageKcalCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text(
-            '已估算日均',
-            style: TextStyle(
+          Text(
+            context.l10n.shareCardEstimatedDailyAvg,
+            style: const TextStyle(
               color: WeeklySummaryShareCard._mutedInk,
               fontSize: 10,
             ),
@@ -271,7 +273,15 @@ class _WeeklyHeatmap extends StatelessWidget {
     required this.goalKcal,
   });
 
-  static const _weekdayLabels = ['一', '二', '三', '四', '五', '六', '日'];
+  List<String> _weekdayLabels(BuildContext context) => [
+    context.l10n.shareCardWeekdayShort1,
+    context.l10n.shareCardWeekdayShort2,
+    context.l10n.shareCardWeekdayShort3,
+    context.l10n.shareCardWeekdayShort4,
+    context.l10n.shareCardWeekdayShort5,
+    context.l10n.shareCardWeekdayShort6,
+    context.l10n.shareCardWeekdayShort7,
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -307,7 +317,7 @@ class _WeeklyHeatmap extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                _weekdayLabels[i],
+                _weekdayLabels(context)[i],
                 style: const TextStyle(
                   color: WeeklySummaryShareCard._mutedInk,
                   fontSize: 10,
@@ -324,17 +334,17 @@ class _WeeklyHeatmap extends StatelessWidget {
       children: [
         Row(children: cells),
         const SizedBox(height: 10),
-        const Row(
+        Row(
           children: [
-            _HeatLegend(color: WeeklySummaryShareCard._heatEmpty, label: '未记录'),
-            SizedBox(width: 12),
-            _HeatLegend(color: WeeklySummaryShareCard._heatLow, label: '偏少'),
-            SizedBox(width: 12),
-            _HeatLegend(color: WeeklySummaryShareCard._heatMid, label: '接近'),
-            SizedBox(width: 12),
-            _HeatLegend(color: WeeklySummaryShareCard._green, label: '达标'),
-            SizedBox(width: 12),
-            _HeatLegend(color: WeeklySummaryShareCard._heatOver, label: '超出'),
+            _HeatLegend(color: WeeklySummaryShareCard._heatEmpty, label: context.l10n.shareCardLegendEmpty),
+            const SizedBox(width: 12),
+            _HeatLegend(color: WeeklySummaryShareCard._heatLow, label: context.l10n.shareCardLegendLow),
+            const SizedBox(width: 12),
+            _HeatLegend(color: WeeklySummaryShareCard._heatMid, label: context.l10n.shareCardLegendNear),
+            const SizedBox(width: 12),
+            _HeatLegend(color: WeeklySummaryShareCard._green, label: context.l10n.shareCardLegendOnTarget),
+            const SizedBox(width: 12),
+            _HeatLegend(color: WeeklySummaryShareCard._heatOver, label: context.l10n.shareCardLegendOver),
           ],
         ),
       ],

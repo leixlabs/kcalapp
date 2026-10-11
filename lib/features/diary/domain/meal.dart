@@ -85,5 +85,5 @@ class Meal {
 
   @override
   String toString() =>
-      'Meal($name, ${mealType.label}, ${foodItems.length} items, ${totalNutrition.kcalDisplay}kcal)';
+      'Meal($name, ${mealType.name}, ${foodItems.length} items, ${totalNutrition.kcalDisplay}kcal)';
 }

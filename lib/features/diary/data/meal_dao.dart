@@ -187,14 +187,16 @@ class MealDao {
     int mealId, {
     required AiRecognitionStatus status,
     LlmRecognitionResult? result,
+    String? processingName,
+    String? failedName,
   }) async {
     final database = await db.database;
     await database.transaction((tx) async {
       if (result == null) {
         final statusName = status == AiRecognitionStatus.processing
-            ? 'AI 识别中'
+            ? processingName
             : status == AiRecognitionStatus.failed
-            ? '识别失败的餐食'
+            ? failedName
             : null;
         if (statusName == null) {
           await tx.rawUpdate(
@@ -243,10 +245,13 @@ class MealDao {
     });
   }
 
-  Future<void> markInterruptedAiRecognitionsFailed() async {
+  Future<void> markInterruptedAiRecognitionsFailed({
+    required String failedName,
+  }) async {
     await db.rawUpdate(
-      "UPDATE meals SET name = '识别失败的餐食', ai_recognition_status = ?, updated_at = ? WHERE ai_recognition_status = ? AND is_deleted = 0",
+      "UPDATE meals SET name = ?, ai_recognition_status = ?, updated_at = ? WHERE ai_recognition_status = ? AND is_deleted = 0",
       [
+        failedName,
         AiRecognitionStatus.failed.name,
         DateTime.now().toIso8601String(),
         AiRecognitionStatus.processing.name,

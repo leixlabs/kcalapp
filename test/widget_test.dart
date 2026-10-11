@@ -1,7 +1,8 @@
 import 'dart:convert';
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:calory/l10n/l10n.dart';
 import 'package:calory/features/diary/domain/nutrition.dart';
 import 'package:calory/features/diary/domain/food_item.dart';
 import 'package:calory/features/diary/domain/meal.dart';
@@ -290,7 +291,7 @@ void main() {
     });
   });
 
-  testWidgets('double-tapping a failed meal photo requests a retry', (
+  testWidgets('tapping a failed meal photo requests a retry', (
     tester,
   ) async {
     final date = DateTime(2026, 9, 29);
@@ -324,17 +325,23 @@ void main() {
         ),
       ],
     );
-    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pumpWidget(
+      MaterialApp.router(
+        routerConfig: router,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+      ),
+    );
     final photoCenter = tester.getCenter(find.byIcon(Icons.restaurant));
 
     await tester.tapAt(photoCenter);
-    await tester.pump(const Duration(milliseconds: 50));
-    await tester.tapAt(photoCenter);
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
 
     expect(retryCount, 1);
     expect(find.text('Meal detail'), findsNothing);
+    await tester.tap(find.text('识别失败的餐食'));
+    await tester.pumpAndSettle();
+    expect(find.text('Meal detail'), findsOneWidget);
     router.dispose();
   });
 
@@ -446,11 +453,20 @@ void main() {
       expect(MealType.fromString('invalid'), MealType.breakfast);
     });
 
-    test('labels should be in Chinese', () {
-      expect(MealType.breakfast.label, '早餐');
-      expect(MealType.lunch.label, '午餐');
-      expect(MealType.dinner.label, '晚餐');
-      expect(MealType.snack.label, '加餐');
+    test('labels are localized', () async {
+      final zh = await AppLocalizations.delegate.load(const Locale('zh'));
+      final en = await AppLocalizations.delegate.load(const Locale('en'));
+      expect(mealTypeLabel(zh, MealType.breakfast), '早餐');
+      expect(mealTypeLabel(zh, MealType.lunch), '午餐');
+      expect(mealTypeLabel(zh, MealType.dinner), '晚餐');
+      expect(mealTypeLabel(zh, MealType.snack), '加餐');
+      expect(mealTypeLabel(en, MealType.breakfast), 'Breakfast');
+    });
+
+    test('en and zh expose the same meal type keys', () async {
+      final zh = await AppLocalizations.delegate.load(const Locale('zh'));
+      final en = await AppLocalizations.delegate.load(const Locale('en'));
+      expect(mealTypeLabel(zh, MealType.dinner), isNot(mealTypeLabel(en, MealType.dinner)));
     });
   });
 
@@ -481,10 +497,11 @@ void main() {
       expect(item.getVitamin(Vitamin.c), isNull);
     });
 
-    test('mineral enum includes calcium, sodium, and magnesium', () {
-      expect(Mineral.calcium.label, '钙');
-      expect(Mineral.sodium.label, '钠');
-      expect(Mineral.magnesium.label, '镁');
+    test('mineral labels are localized', () async {
+      final zh = await AppLocalizations.delegate.load(const Locale('zh'));
+      expect(mineralLabel(zh, Mineral.calcium), '钙');
+      expect(mineralLabel(zh, Mineral.sodium), '钠');
+      expect(mineralLabel(zh, Mineral.magnesium), '镁');
       expect(Mineral.calcium.unit, 'mg');
       expect(Mineral.sodium.unit, 'mg');
       expect(Mineral.magnesium.unit, 'mg');

@@ -14,6 +14,7 @@ import '../../domain/meal.dart';
 import '../../domain/weekly_narrative.dart';
 import '../../../../core/widgets/meal_photo.dart';
 import '../../../../core/widgets/states.dart';
+import '../../../../l10n/l10n.dart';
 import 'widgets/weekly_summary_share_card.dart';
 
 class WeeklySummaryPage extends ConsumerStatefulWidget {
@@ -35,7 +36,9 @@ class _WeeklySummaryPageState extends ConsumerState<WeeklySummaryPage> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      ref.read(weeklyReviewControllerProvider).ensure(widget.selectedDate);
+      ref
+          .read(weeklyReviewControllerProvider)
+          .ensure(widget.selectedDate, context.l10n);
     });
   }
 
@@ -56,13 +59,16 @@ class _WeeklySummaryPageState extends ConsumerState<WeeklySummaryPage> {
         ref.watch(weeklyKcalGoalProvider(widget.selectedDate)).valueOrNull ??
         DailyGoal.recommendedKcal;
 
+    final l10n = context.l10n;
     return Scaffold(
       appBar: AppBar(
-        title: Text(isCurrentWeek ? '本周回顾' : '周回顾'),
+        title: Text(
+          isCurrentWeek ? l10n.weeklySummaryTitleCurrent : l10n.weeklySummaryTitle,
+        ),
         actions: [
           if (hasMeals && hasStoredReview)
             IconButton(
-              tooltip: '调整饮食建议',
+              tooltip: l10n.weeklySummaryAdjustAdvice,
               icon: const Icon(Icons.edit_outlined),
               onPressed: _editImprovement,
             ),
@@ -71,15 +77,15 @@ class _WeeklySummaryPageState extends ConsumerState<WeeklySummaryPage> {
       body: mealsAsync.when(
         loading: () => const LoadingView(),
         error: (error, _) => ErrorStateView(
-          message: '周回顾加载失败：$error',
+          message: l10n.weeklySummaryLoadError('$error'),
           onRetry: () =>
               ref.invalidate(weeklyMealsProvider(widget.selectedDate)),
         ),
         data: (meals) {
           final summary = WeeklySummary(weekStart: weekStart, meals: meals);
           final fallback = WeeklyNarrative(
-            happened: summary.happenedSummary,
-            improvement: summary.nextWeekFocus,
+            happened: summary.happenedSummary(l10n),
+            improvement: summary.nextWeekFocus(l10n),
           );
           final happened = hasStoredReview
               ? stored!.happened!
@@ -120,7 +126,11 @@ class _WeeklySummaryPageState extends ConsumerState<WeeklySummaryPage> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.ios_share_outlined),
-              label: Text(_isSharing ? '正在生成…' : '生成图片保存'),
+              label: Text(
+                _isSharing
+                    ? l10n.weeklySummaryGenerating
+                    : l10n.weeklySummaryGenerateImage,
+              ),
             ),
           ),
         ),
@@ -129,6 +139,7 @@ class _WeeklySummaryPageState extends ConsumerState<WeeklySummaryPage> {
   }
 
   Future<void> _editImprovement() async {
+    final l10n = context.l10n;
     final stored = ref
         .read(weeklyReviewProvider(widget.selectedDate))
         .valueOrNull;
@@ -141,28 +152,30 @@ class _WeeklySummaryPageState extends ConsumerState<WeeklySummaryPage> {
     );
     final current = (stored?.improvement?.isNotEmpty ?? false)
         ? stored!.improvement!
-        : summary.nextWeekFocus;
+        : summary.nextWeekFocus(l10n);
 
     final controller = TextEditingController(text: current);
     final edited = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('调整饮食建议'),
+        title: Text(l10n.weeklySummaryAdjustAdvice),
         content: TextField(
           controller: controller,
           autofocus: true,
           maxLines: 2,
           maxLength: 60,
-          decoration: const InputDecoration(labelText: '下周想改进什么？'),
+          decoration: InputDecoration(
+            labelText: l10n.weeklySummaryNextWeekQuestion,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('取消'),
+            child: Text(l10n.actionCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(controller.text),
-            child: const Text('应用'),
+            child: Text(l10n.actionApply),
           ),
         ],
       ),
@@ -171,7 +184,7 @@ class _WeeklySummaryPageState extends ConsumerState<WeeklySummaryPage> {
     if (!mounted || edited == null || edited.trim().isEmpty) return;
     await ref
         .read(weeklyReviewControllerProvider)
-        .editImprovement(widget.selectedDate, edited.trim());
+        .editImprovement(widget.selectedDate, edited.trim(), l10n);
   }
 
   Future<void> _precachePhotos() async {
@@ -201,6 +214,7 @@ class _WeeklySummaryPageState extends ConsumerState<WeeklySummaryPage> {
   }
 
   Future<void> _generateAndShare(BuildContext buttonContext) async {
+    final l10n = context.l10n;
     final shareBox = buttonContext.findRenderObject() as RenderBox?;
     final shareOrigin = shareBox != null && shareBox.hasSize
         ? shareBox.localToGlobal(Offset.zero) & shareBox.size
@@ -213,13 +227,13 @@ class _WeeklySummaryPageState extends ConsumerState<WeeklySummaryPage> {
       await WidgetsBinding.instance.endOfFrame;
       final boundary = _cardKey.currentContext?.findRenderObject();
       if (boundary is! RenderRepaintBoundary) {
-        throw StateError('分享卡片尚未准备好');
+        throw StateError(l10n.weeklySummaryNoCard);
       }
 
       final image = await boundary.toImage(pixelRatio: 3);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       image.dispose();
-      if (byteData == null) throw StateError('无法生成分享图片');
+      if (byteData == null) throw StateError(l10n.weeklySummaryNoImage);
 
       final weekStart = weekStartFor(widget.selectedDate);
       final imageFile = File(
@@ -236,17 +250,22 @@ class _WeeklySummaryPageState extends ConsumerState<WeeklySummaryPage> {
 
       await SharePlus.instance.share(
         ShareParams(
-          title: '本周饮食回顾',
+          title: l10n.weeklySummaryShareTitle,
           files: [
-            XFile(imageFile.path, name: '本周饮食回顾.png', mimeType: 'image/png'),
+            XFile(
+              imageFile.path,
+              name: l10n.weeklySummaryFileName,
+              mimeType: 'image/png',
+            ),
           ],
           sharePositionOrigin: shareOrigin,
         ),
       );
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('生成分享卡片失败：$error')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.weeklySummaryShareFailed('$error'))),
+        );
       }
     } finally {
       if (mounted) setState(() => _isSharing = false);

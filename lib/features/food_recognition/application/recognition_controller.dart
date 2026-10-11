@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/providers.dart';
 import '../../../data/llm/llm_adapter.dart';
+import '../../../l10n/l10n.dart';
 import '../../../platform/camera/camera_gateway.dart';
 import '../../diary/application/diary_providers.dart';
 import '../../diary/application/meal_review_controller.dart';
@@ -32,6 +33,7 @@ class RecognitionController {
     String? photoAssetId,
     String? photoPath,
     required MealType mealType,
+    required AppLocalizations l10n,
   }) async {
     final imageProcessor = _ref.read(imageProcessorProvider);
     final llmAdapter = _ref.read(llmAdapterProvider);
@@ -42,6 +44,7 @@ class RecognitionController {
       await mealRepository.updateAiRecognition(
         mealId,
         status: AiRecognitionStatus.processing,
+        processingName: l10n.mealDbRecognizing,
       );
       _invalidateDiary();
 
@@ -50,16 +53,16 @@ class RecognitionController {
         photoPath: photoPath,
       );
       if (sourcePath == null) {
-        throw RecognitionFailedException('找不到照片，无法识别');
+        throw RecognitionFailedException(l10n.mealRecognizeNoPhoto);
       }
 
       final profile = await _ref.read(llmProfileDaoProvider).getActive();
       if (profile == null) {
-        throw RecognitionFailedException('请先在设置中配置 LLM 服务');
+        throw RecognitionFailedException(l10n.mealRecognizeConfigureLlm);
       }
       final apiKey = await _ref.read(secureStoreProvider).read('${profile.id}');
       if (apiKey == null || apiKey.isEmpty) {
-        throw RecognitionFailedException('请先在设置中配置 API Key');
+        throw RecognitionFailedException(l10n.mealRecognizeConfigureKey);
       }
 
       processedImage = await imageProcessor.processImage(
@@ -69,6 +72,7 @@ class RecognitionController {
         profile: profile,
         apiKey: apiKey,
         imagePath: processedImage.path,
+        language: l10n.localeName,
         mealTypeHint: _toHint(mealType),
       );
       await mealRepository.updateAiRecognition(
@@ -77,11 +81,14 @@ class RecognitionController {
         result: result,
       );
       _invalidateDiary();
-      unawaited(_ref.read(mealReviewControllerProvider).refreshForMeal(mealId));
+      unawaited(
+        _ref.read(mealReviewControllerProvider).refreshForMeal(mealId, l10n),
+      );
     } catch (_) {
       await mealRepository.updateAiRecognition(
         mealId,
         status: AiRecognitionStatus.failed,
+        failedName: l10n.mealDbRecognitionFailed,
       );
       _invalidateDiary();
       rethrow;

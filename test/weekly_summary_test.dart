@@ -1,4 +1,6 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:calory/l10n/l10n.dart';
 import 'package:calory/features/diary/application/weekly_summary.dart';
 import 'package:calory/features/diary/domain/food_category.dart';
 import 'package:calory/features/diary/domain/food_item.dart';
@@ -6,6 +8,11 @@ import 'package:calory/features/diary/domain/meal.dart';
 import 'package:calory/features/diary/domain/meal_type.dart';
 
 void main() {
+  late AppLocalizations zh;
+  setUpAll(() async {
+    zh = await AppLocalizations.delegate.load(const Locale('zh'));
+  });
+
   group('WeeklySummary', () {
     test('counts recorded days and averages only days with estimated kcal', () {
       final monday = DateTime(2026, 9, 28);
@@ -42,7 +49,7 @@ void main() {
       );
 
       expect(summary.focusCategory, FoodCategory.meatEggsAndSeafood);
-      expect(summary.nextWeekFocus, contains('肉、蛋或水产'));
+      expect(summary.nextWeekFocus(zh), contains('肉、蛋或水产'));
     });
 
     test(
@@ -57,7 +64,7 @@ void main() {
         );
 
         expect(summary.focusCategory, isNull);
-        expect(summary.nextWeekFocus, contains('继续记录'));
+        expect(summary.nextWeekFocus(zh), contains('继续记录'));
       },
     );
 
@@ -80,9 +87,9 @@ void main() {
         ],
       );
 
-      expect(summary.happenedSummary, contains('记录了 2 天'));
-      expect(summary.happenedSummary, contains('日均约 500 kcal'));
-      expect(summary.happenedSummary, contains('谷薯类相对较多'));
+      expect(summary.happenedSummary(zh), contains('记录了 2 天'));
+      expect(summary.happenedSummary(zh), contains('日均约 500 kcal'));
+      expect(summary.happenedSummary(zh), contains('谷薯类相对较多'));
     });
 
     test('keeps every photo in chronological order', () {

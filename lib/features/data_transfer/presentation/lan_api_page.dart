@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/providers.dart';
+import '../../../l10n/l10n.dart';
 import '../data/lan_api_server.dart';
 
 class LanApiPage extends ConsumerStatefulWidget {
@@ -37,7 +38,7 @@ class _LanApiPageState extends ConsumerState<LanApiPage> {
     final isRunning = server?.isRunning ?? false;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('局域网只读 API')),
+      appBar: AppBar(title: Text(context.l10n.lanApiTitle)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -58,7 +59,9 @@ class _LanApiPageState extends ConsumerState<LanApiPage> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          isRunning ? '服务运行中' : '服务已停止',
+                          isRunning
+                              ? context.l10n.lanApiStatusRunning
+                              : context.l10n.lanApiStatusStopped,
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w600,
                           ),
@@ -75,7 +78,7 @@ class _LanApiPageState extends ConsumerState<LanApiPage> {
                                     strokeWidth: 2,
                                   ),
                                 )
-                              : const Text('停止'),
+                              : Text(context.l10n.actionStop),
                         )
                       else
                         FilledButton(
@@ -88,13 +91,13 @@ class _LanApiPageState extends ConsumerState<LanApiPage> {
                                     strokeWidth: 2,
                                   ),
                                 )
-                              : const Text('启动'),
+                              : Text(context.l10n.actionStart),
                         ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '仅在此页面打开期间运行。使用同一局域网内的电脑或其他设备访问；离开本页时服务会自动停止。',
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  context.l10n.lanApiRunHint,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.outline,
                     ),
@@ -129,7 +132,7 @@ class _LanApiPageState extends ConsumerState<LanApiPage> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      '餐食和目标属于个人健康数据。访问接口必须携带上方令牌；停止服务或离开本页后，令牌立即失效。HTTP 未加密，令牌会在局域网中明文传输，请只在可信网络使用。',
+                      context.l10n.lanApiSecurity,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.outline,
                       ),
@@ -153,7 +156,7 @@ class _LanApiPageState extends ConsumerState<LanApiPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '局域网地址',
+              context.l10n.lanApiAddresses,
               style: theme.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
@@ -167,7 +170,7 @@ class _LanApiPageState extends ConsumerState<LanApiPage> {
                   port: port,
                   queryParameters: {'token': server.accessToken},
                 ).toString(),
-                tooltip: '复制带令牌的地址',
+                tooltip: context.l10n.lanApiCopyAddress,
               ),
           ],
         ),
@@ -183,13 +186,16 @@ class _LanApiPageState extends ConsumerState<LanApiPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '访问令牌',
+              context.l10n.lanApiToken,
               style: theme.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 8),
-            _CopyableValue(value: server.accessToken ?? '', tooltip: '复制令牌'),
+            _CopyableValue(
+              value: server.accessToken ?? '',
+              tooltip: context.l10n.lanApiCopyToken,
+            ),
           ],
         ),
       ),
@@ -197,6 +203,7 @@ class _LanApiPageState extends ConsumerState<LanApiPage> {
   }
 
   Widget _buildEndpointsCard(ThemeData theme) {
+    final l10n = context.l10n;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -204,27 +211,27 @@ class _LanApiPageState extends ConsumerState<LanApiPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '可用接口',
+              l10n.lanApiAvailableEndpoints,
               style: theme.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 12),
-            const _EndpointDescription(
+            _EndpointDescription(
               endpoint: 'GET /api/v1/meals?from=&to=',
-              description: '读取指定时间范围内的餐食和食材明细',
+              description: l10n.lanApiEndpointMealsDesc,
             ),
-            const _EndpointDescription(
+            _EndpointDescription(
               endpoint: 'GET /api/v1/goals',
-              description: '读取每日营养目标',
+              description: l10n.lanApiEndpointGoalsDesc,
             ),
-            const _EndpointDescription(
+            _EndpointDescription(
               endpoint: 'GET /api/v1/health',
-              description: '检查服务状态',
+              description: l10n.lanApiEndpointHealthDesc,
             ),
             const SizedBox(height: 8),
             Text(
-              '认证：URL 参数 ?token=<令牌> 或请求头 Authorization: Bearer <令牌>。打开局域网地址可查看完整 API 文档。',
+              l10n.lanApiAuthHint,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.outline,
                 fontFamily: 'monospace',
@@ -260,7 +267,7 @@ class _LanApiPageState extends ConsumerState<LanApiPage> {
         setState(() {
           _server = null;
           _isStarting = false;
-          _error = '无法启动服务：$error';
+          _error = context.l10n.lanApiStartFailed('$error');
         });
       }
     } catch (error) {
@@ -269,7 +276,7 @@ class _LanApiPageState extends ConsumerState<LanApiPage> {
         setState(() {
           _server = null;
           _isStarting = false;
-          _error = '无法启动服务：$error';
+          _error = context.l10n.lanApiStartFailed('$error');
         });
       }
     }
@@ -345,7 +352,7 @@ class _CopyableValue extends StatelessWidget {
             await Clipboard.setData(ClipboardData(text: value));
             if (context.mounted) {
               ScaffoldMessenger.of(context)
-                  .showSnackBar(const SnackBar(content: Text('已复制')));
+                  .showSnackBar(SnackBar(content: Text(context.l10n.lanApiCopied)));
             }
           },
           icon: const Icon(Icons.copy),

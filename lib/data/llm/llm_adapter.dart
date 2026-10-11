@@ -199,7 +199,9 @@ class LlmAdapter {
     required String apiKey,
     required MealTypeHint mealType,
     required List<Meal> meals,
+    String language = 'zh',
   }) async {
+    final zh = language.toLowerCase().startsWith('zh');
     final foods = meals
         .expand((meal) => meal.foodItems)
         .map((item) => '${item.name} ${item.weightG.round()}g')
@@ -235,10 +237,13 @@ class LlmAdapter {
         'messages': [
           {
             'role': 'user',
-            'content':
-                '''请为这一顿${mealType.label}写一条中文饮食评价。仅基于给出的食物和汇总数据，不做医疗诊断；先说整体搭配，再给一个可执行建议。控制在 55 个汉字以内，不要标题、列表或免责声明。
+            'content': zh
+                ? '''请为这一顿${mealType.label(zh)}写一条中文饮食评价。仅基于给出的食物和汇总数据，不做医疗诊断；先说整体搭配，再给一个可执行建议。控制在 55 个汉字以内，不要标题、列表或免责声明。
 食物：$foods
-总热量：${total.round()} kcal；碳水：${carbs.round()}g；蛋白质：${protein.round()}g；脂肪：${fat.round()}g''',
+总热量：${total.round()} kcal；碳水：${carbs.round()}g；蛋白质：${protein.round()}g；脂肪：${fat.round()}g'''
+                : '''Write one short English dietary review for this ${mealType.label(zh)}. Base it only on the foods and totals given; do not give medical diagnoses. Start with the overall balance, then give one actionable tip. Keep it under 40 words, no title, list, or disclaimer.
+Foods: $foods
+Total calories: ${total.round()} kcal; Carbs: ${carbs.round()}g; Protein: ${protein.round()}g; Fat: ${fat.round()}g''',
           },
         ],
       },
@@ -253,13 +258,15 @@ class LlmAdapter {
     return content.trim();
   }
 
-  /// 为某一周的全部已保存记录生成两段中文回顾；不上传图片。
+  /// 为某一周的全部已保存记录生成两段回顾；不上传图片。
   Future<WeeklyNarrative> summarizeWeek({
     required LlmProfile profile,
     required String apiKey,
     required DateTime weekStart,
     required List<Meal> meals,
+    String language = 'zh',
   }) async {
+    final zh = language.toLowerCase().startsWith('zh');
     final weekEnd = weekStart.add(const Duration(days: 6));
     final recordedDays = meals
         .map(
@@ -291,7 +298,7 @@ class LlmAdapter {
         .where((entry) => entry.value > 0)
         .map(
           (entry) =>
-              '${entry.key.label} ${entry.value.round()}g / 参考 ${entry.key.weeklyReferenceGrams.round()}g',
+              '${entry.key.id} ${entry.value.round()}g / reference ${entry.key.weeklyReferenceGrams.round()}g',
         )
         .join('；');
     final foodWeights = <String, double>{};
@@ -333,8 +340,8 @@ class LlmAdapter {
         'messages': [
           {
             'role': 'user',
-            'content':
-                '''你现在是一位犀利又懂行的饮食观察者，要为这一周的饮食写一段「锐评」。请根据下面这一周的真实饮食记录，输出一个 JSON 对象，仅包含两个字符串字段：{"happened":"...","improvement":"..."}。
+            'content': zh
+                ? '''你现在是一位犀利又懂行的饮食观察者，要为这一周的饮食写一段「锐评」。请根据下面这一周的真实饮食记录，输出一个 JSON 对象，仅包含两个字符串字段：{"happened":"...","improvement":"..."}。
 - happened（本周锐评）：一到两句有态度、有画面感、让人记得住的中文。要点出这一周实际吃了什么、哪类食物或哪顿反复出现、哪里有亮点或哪里明显失衡，带点调侃或心疼的语气，但始终善意。必须落到具体食物或习惯上，可以用食物名制造记忆点，不要堆砌数字和营养术语，不评分、不做医疗或营养诊断，不超过 60 个汉字。
 - improvement（饮食建议）：一句具体、可执行的中文建议，告诉下周可以怎么调整，不超过 35 个汉字。
 只输出这个 JSON，不要 Markdown、不要列表，不要出现「AI」「免责声明」「仅供参考」等字样。
@@ -344,7 +351,18 @@ class LlmAdapter {
 已估算日均：${averageKcal == null ? '无' : '${averageKcal.round()} kcal'}
 每日热量：${dailyLines.isEmpty ? '无' : dailyLines}
 各类食物累计：${categoryLines.isEmpty ? '无' : categoryLines}
-本周出现较多的食物：${topFoods.isEmpty ? '无' : topFoods}''',
+本周出现较多的食物：${topFoods.isEmpty ? '无' : topFoods}'''
+                : '''You are a sharp but knowledgeable food observer, writing a "hot take" on this week's eating. Based on the real records below, output a JSON object with exactly two string fields: {"happened":"...","improvement":"..."}.
+- happened (the hot take): one or two vivid, memorable English sentences. Point out what was actually eaten, which food or meal recurred, and where there were highlights or clear imbalances. A teasing but always kind tone. Anchor it to concrete foods or habits; use food names for memorability; do not pile up numbers or nutrition jargon; no scoring, no medical or nutrition diagnosis; at most 45 words.
+- improvement (advice): one concrete, actionable English tip for how to adjust next week, at most 25 words.
+Output only this JSON, no Markdown, no lists, and never the words "AI", "disclaimer", or "for reference only".
+
+Period: $period
+Days recorded: $recordedDays
+Estimated daily average: ${averageKcal == null ? 'none' : '${averageKcal.round()} kcal'}
+Daily calories: ${dailyLines.isEmpty ? 'none' : dailyLines}
+Cumulative by category: ${categoryLines.isEmpty ? 'none' : categoryLines}
+Frequently eaten foods: ${topFoods.isEmpty ? 'none' : topFoods}''',
           },
         ],
       },
@@ -396,13 +414,17 @@ class LlmAdapter {
     MealTypeHint? hint,
     LlmResponseFormat responseFormat,
   ) {
-    final mealHint = hint != null ? '\n餐次提示: ${hint.label}' : '';
+    final zh = language.toLowerCase().startsWith('zh');
+    final mealHint = hint != null
+        ? (zh ? '\n餐次提示: ${hint.label(true)}' : '\nMeal hint: ${hint.label(false)}')
+        : '';
     final outputFormat = responseFormat == LlmResponseFormat.jsonSchema
         ? ''
         : '''
 - 只输出一个 JSON 对象，不要 Markdown 或额外说明，结构为：{"meal_name":"餐名","items":[{"name":"食材名","category_id":"类别ID","weight_g":0,"kcal":0,"carbs_g":0,"protein_g":0,"fat_g":0,"confidence":"low|medium|high","micronutrients":{"calcium_mg":0,"iron_mg":0,"sodium_mg":0,"vitamin_a_ug":0,"vitamin_c_mg":0,"vitamin_d_ug":0,"vitamin_b12_ug":0}}],"overall_confidence":"low|medium|high","notes":"识别说明"}
 - micronutrients 仅包含钙、铁、钠、维生素 A/C/D/B12；仅在有合理依据时填写，无法可靠估算的字段直接省略，绝不能为了补齐字段猜测或填 0''';
-    return '''请分析这张餐食图片，识别其中的食物。$mealHint
+    if (zh) {
+      return '''请分析这张餐食图片，识别其中的食物。$mealHint
 
 要求：
 - 只识别图片中可见的食物，不要编造图片中不存在的内容
@@ -411,6 +433,21 @@ class LlmAdapter {
 - confidence 表示你对该食材识别和营养估算的置信度
 - 微量营养素仅返回钙、铁、钠、维生素 A/C/D/B12；不返回其他项目。无法由图片和食物常识可靠估算时省略该字段
 $outputFormat''';
+    }
+    final outputFormatEn = responseFormat == LlmResponseFormat.jsonSchema
+        ? ''
+        : '''
+- Output a single JSON object, no Markdown or extra prose, with the structure: {"meal_name":"...","items":[{"name":"...","category_id":"...","weight_g":0,"kcal":0,"carbs_g":0,"protein_g":0,"fat_g":0,"confidence":"low|medium|high","micronutrients":{"calcium_mg":0,"iron_mg":0,"sodium_mg":0,"vitamin_a_ug":0,"vitamin_c_mg":0,"vitamin_d_ug":0,"vitamin_b12_ug":0}}],"overall_confidence":"low|medium|high","notes":"..."}
+- micronutrients includes only calcium, iron, sodium, and vitamins A/C/D/B12; fill them only with reasonable grounds, omit fields you cannot estimate reliably, and never guess or put 0 to pad the fields''';
+    return '''Analyze this meal photo and identify the foods in it. Respond in English.$mealHint
+
+Requirements:
+- Only identify foods visible in the image; do not invent anything not present
+- Assign each ingredient a category_id based on the ingredient itself, not the whole dish: grains, vegetables_fruits, meat_eggs_seafood (meat, poultry, eggs, seafood), dairy_beans_nuts (dairy, soy products, nuts); use other when none fit. Beans such as red or mung beans go under grains. Composite dishes must be split into their visible main ingredients and classified separately
+- weight_g, kcal, carbs_g, protein_g, fat_g are estimates and must be non-negative
+- confidence reflects your certainty in the ingredient identification and nutrition estimate
+- Return only calcium, iron, sodium, and vitamins A/C/D/B12 as micronutrients; omit anything you cannot estimate reliably from the image and general food knowledge
+$outputFormatEn''';
   }
 
   /// 构造 OpenAI Structured Outputs 所需的 response_format 对象。
@@ -588,11 +625,11 @@ class LlmResponseTruncatedException implements Exception {
 enum MealTypeHint { breakfast, lunch, dinner, snack }
 
 extension on MealTypeHint {
-  String get label => switch (this) {
-    MealTypeHint.breakfast => '早餐',
-    MealTypeHint.lunch => '午餐',
-    MealTypeHint.dinner => '晚餐',
-    MealTypeHint.snack => '加餐',
+  String label(bool zh) => switch (this) {
+    MealTypeHint.breakfast => zh ? '早餐' : 'breakfast',
+    MealTypeHint.lunch => zh ? '午餐' : 'lunch',
+    MealTypeHint.dinner => zh ? '晚餐' : 'dinner',
+    MealTypeHint.snack => zh ? '加餐' : 'snack',
   };
 }
 

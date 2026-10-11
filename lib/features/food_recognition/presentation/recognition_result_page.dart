@@ -16,6 +16,7 @@ import '../../../app/theme.dart';
 import '../../../core/widgets/states.dart';
 import '../../../core/utils/format_utils.dart';
 import '../../../core/widgets/ruler_value_picker.dart';
+import '../../../l10n/l10n.dart';
 
 final recognitionDraftProvider = StateProvider<MealDraft?>((ref) => null);
 
@@ -71,13 +72,13 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
 
     if (draft == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('AI 识别结果')),
+        appBar: AppBar(title: Text(context.l10n.recognitionTitle)),
         body: EmptyState(
-          title: '暂无识别结果',
-          subtitle: '请先拍照识别餐食',
+          title: context.l10n.recognitionNoResult,
+          subtitle: context.l10n.recognitionHint,
           icon: Icons.camera_alt_outlined,
           onAction: () => context.go('/'),
-          actionLabel: '返回首页',
+          actionLabel: context.l10n.recognitionBackHome,
         ),
       );
     }
@@ -95,7 +96,7 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAF8),
       appBar: AppBar(
-        title: const Text('AI 识别结果'),
+        title: Text(context.l10n.recognitionTitle),
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
@@ -132,8 +133,8 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
                   Expanded(
                     child: TextField(
                       controller: _nameController,
-                      decoration: const InputDecoration(
-                        labelText: '餐名',
+                      decoration: InputDecoration(
+                        labelText: context.l10n.recognitionMealName,
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.zero,
                       ),
@@ -163,7 +164,7 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
                             (t) => DropdownMenuItem(
                               value: t,
                               child: Text(
-                                t.label,
+                                mealTypeLabel(context.l10n, t),
                                 style: theme.textTheme.bodyMedium,
                               ),
                             ),
@@ -266,11 +267,11 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
                   children: [
                     _buildNutritionItem(
                       theme,
-                      '碳水',
+                      context.l10n.macroCarbs,
                       '${totalCarbs.toStringAsFixed(1)}g',
                       AppColors.carbs,
                       onTap: () => _openNutrientSlider(
-                        label: '碳水',
+                        label: context.l10n.macroCarbs,
                         color: AppColors.carbs,
                         currentValue: totalCarbs / _servings,
                         maxValue: 300,
@@ -279,11 +280,11 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
                     ),
                     _buildNutritionItem(
                       theme,
-                      '蛋白质',
+                      context.l10n.macroProtein,
                       '${totalProtein.toStringAsFixed(1)}g',
                       AppColors.protein,
                       onTap: () => _openNutrientSlider(
-                        label: '蛋白质',
+                        label: context.l10n.macroProtein,
                         color: AppColors.protein,
                         currentValue: totalProtein / _servings,
                         maxValue: 200,
@@ -293,11 +294,11 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
                     ),
                     _buildNutritionItem(
                       theme,
-                      '脂肪',
+                      context.l10n.macroFat,
                       '${totalFat.toStringAsFixed(1)}g',
                       AppColors.fat,
                       onTap: () => _openNutrientSlider(
-                        label: '脂肪',
+                        label: context.l10n.macroFat,
                         color: AppColors.fat,
                         currentValue: totalFat / _servings,
                         maxValue: 150,
@@ -317,13 +318,13 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    '食材 (kcal)',
+                    context.l10n.recognitionFoodsKcal,
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   Text(
-                    '点击食材修改名字和卡路里',
+                    context.l10n.recognitionFoodsHint,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.outline,
                     ),
@@ -545,7 +546,7 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
                 children: [
                   // 标题
                   Text(
-                    '修改$label',
+                    context.l10n.editValue(label),
                     style: Theme.of(ctx2).textTheme.titleLarge
                         ?.copyWith(fontWeight: FontWeight.w600),
                   ),
@@ -577,9 +578,9 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
                             borderRadius: BorderRadius.circular(14),
                           ),
                         ),
-                        child: const Text(
-                          '保存',
-                          style: TextStyle(
+                        child: Text(
+                          context.l10n.actionSave,
+                          style: const TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.w600,
                           ),
@@ -599,6 +600,7 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
   /// 汇总所有食材的微量营养素，仅在至少有一个字段非 null 时渲染区块。
   /// 微量营养素区块：矿物质 + 维生素，均无数据时不渲染。
   Widget _buildMineralsSection(ThemeData theme) {
+    final l10n = context.l10n;
     // 对每个枚举位按 servings 汇总所有食材的值，全为 null 时该位返回 null
     double? sumMineral(Mineral m) {
       final vals = _foodItems
@@ -629,7 +631,7 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
         .map(
           (mineral) => _MicroCell(
             symbol: mineral.symbol,
-            label: mineral.label,
+            label: mineralLabel(l10n, mineral),
             value: fmt(sumMineral(mineral)),
             unit: mineral.unit,
           ),
@@ -640,7 +642,7 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
         .map(
           (vitamin) => _MicroCell(
             symbol: vitamin.label,
-            label: vitamin.fullLabel.replaceFirst('维生素', ''),
+            label: vitamin.shortLabel,
             value: fmt(sumVitamin(vitamin)),
             unit: vitamin.unit,
           ),
@@ -658,7 +660,7 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '微量营养素',
+            l10n.recognitionMicronutrients,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w600,
             ),
@@ -666,7 +668,7 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
           const SizedBox(height: 8),
           if (hasMinerals) ...[
             Text(
-              '矿物质',
+              l10n.recognitionMinerals,
               style: theme.textTheme.labelMedium?.copyWith(
                 color: theme.colorScheme.outline,
               ),
@@ -677,7 +679,7 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
           ],
           if (hasVitamins) ...[
             Text(
-              '维生素',
+              l10n.recognitionVitamins,
               style: theme.textTheme.labelMedium?.copyWith(
                 color: theme.colorScheme.outline,
               ),
@@ -767,18 +769,22 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('修改食材'),
+        title: Text(context.l10n.recognitionEditFood),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: nameController,
-              decoration: const InputDecoration(labelText: '食材名'),
+              decoration: InputDecoration(
+                labelText: context.l10n.recognitionFoodName,
+              ),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: kcalController,
-              decoration: const InputDecoration(labelText: '热量 (kcal)'),
+              decoration: InputDecoration(
+                labelText: context.l10n.recognitionKcalLabel,
+              ),
               keyboardType: TextInputType.number,
             ),
           ],
@@ -786,7 +792,7 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('取消'),
+            child: Text(context.l10n.actionCancel),
           ),
           FilledButton(
             onPressed: () {
@@ -801,7 +807,7 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
               });
               Navigator.of(ctx).pop();
             },
-            child: const Text('确定'),
+            child: Text(context.l10n.actionConfirm),
           ),
         ],
       ),
@@ -824,9 +830,9 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: const Text(
-              '保存记录',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            child: Text(
+              context.l10n.recognitionSaveRecord,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
           ),
         ),
@@ -872,13 +878,15 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
   Future<void> _saveMeal() async {
     final totalKcal = _foodItems.fold(0.0, (sum, item) => sum + item.kcal);
     if (totalKcal <= 0) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('热量必须大于 0')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.recognitionKcalMustBePositive)),
+      );
       return;
     }
     if (_nameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('请输入餐名')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.recognitionEnterMealName)),
+      );
       return;
     }
 
@@ -913,12 +921,17 @@ class _RecognitionResultPageState extends ConsumerState<RecognitionResultPage> {
       ref.read(recognitionDraftProvider.notifier).state = null;
       ref.invalidate(dailySummaryProvider);
       ref.invalidate(weeklyMealsProvider);
-      unawaited(ref.read(mealReviewControllerProvider).refreshForMeal(mealId));
+      unawaited(
+        ref
+            .read(mealReviewControllerProvider)
+            .refreshForMeal(mealId, context.l10n),
+      );
       if (mounted) context.go('/');
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('保存失败: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.recognitionSaveFailed('$e'))),
+        );
       }
     }
   }

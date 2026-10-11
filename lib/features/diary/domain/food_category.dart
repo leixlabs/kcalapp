@@ -2,17 +2,16 @@ import 'food_item.dart';
 import 'meal.dart';
 
 enum FoodCategory {
-  grains('grains', '🌾 谷 薯', 250),
-  vegetablesAndFruits('vegetables_fruits', '🥬 蔬菜 水果', 650),
-  meatEggsAndSeafood('meat_eggs_seafood', '🥩 肉 蛋 水产', 160),
-  dairyBeansAndNuts('dairy_beans_nuts', '🥛 奶 豆 坚果', 340),
-  other('other', '其他', 0);
+  grains('grains', 250),
+  vegetablesAndFruits('vegetables_fruits', 650),
+  meatEggsAndSeafood('meat_eggs_seafood', 160),
+  dairyBeansAndNuts('dairy_beans_nuts', 340),
+  other('other', 0);
 
   final String id;
-  final String label;
   final double dailyReferenceGrams;
 
-  const FoodCategory(this.id, this.label, this.dailyReferenceGrams);
+  const FoodCategory(this.id, this.dailyReferenceGrams);
 
   double get weeklyReferenceGrams => dailyReferenceGrams * 7;
 

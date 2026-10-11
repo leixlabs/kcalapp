@@ -1,10 +1,9 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../../core/widgets/meal_photo.dart';
 import '../../../../../core/widgets/tap_delight.dart';
+import '../../../../../l10n/l10n.dart';
 import '../../../domain/meal.dart';
 import '../../../domain/meal_review.dart';
 import '../../../domain/meal_type.dart';
@@ -60,7 +59,7 @@ class MealSection extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      mealType.label,
+                      mealTypeLabel(context.l10n, mealType),
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
@@ -86,7 +85,7 @@ class MealSection extends StatelessWidget {
                           ),
                         ),
                         TextSpan(
-                          text: '  ·  约 ',
+                          text: context.l10n.mealSectionApproxWeight,
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: theme.colorScheme.outlineVariant,
                           ),
@@ -151,9 +150,9 @@ class _MealReviewSummary extends StatelessWidget {
 
     final String text;
     if (isRefreshing) {
-      text = content ?? '正在根据 $foodCount 项食物更新评价…';
+      text = content ?? context.l10n.mealReviewUpdating(foodCount);
     } else if (isFailed) {
-      text = content ?? '评价生成失败，点击重新生成';
+      text = content ?? context.l10n.mealSectionReviewFailed;
     } else {
       text = content!;
     }
@@ -194,7 +193,7 @@ class _MealReviewSummary extends StatelessWidget {
             if (isRefreshing) ...[
               const SizedBox(width: 6),
               Text(
-                '更新中',
+                context.l10n.mealSectionUpdating,
                 style: theme.textTheme.labelSmall?.copyWith(
                   color: theme.colorScheme.outline,
                 ),
@@ -202,7 +201,7 @@ class _MealReviewSummary extends StatelessWidget {
             ] else if (status == MealReviewStatus.completed) ...[
               const SizedBox(width: 6),
               Text(
-                '基于 $foodCount 项',
+                context.l10n.mealSectionBasedOn(foodCount),
                 style: theme.textTheme.labelSmall?.copyWith(
                   color: theme.colorScheme.outline,
                 ),
@@ -229,30 +228,12 @@ class _MealItem extends StatefulWidget {
 
 class _MealItemState extends State<_MealItem> {
   final GlobalKey _thumbnailKey = GlobalKey();
-  Timer? _singleTapTimer;
-  Offset? _doubleTapPosition;
 
-  @override
-  void dispose() {
-    _singleTapTimer?.cancel();
-    super.dispose();
-  }
+  Offset? _tapPosition;
 
   void _onTap() {
-    if (widget.meal.aiRecognitionStatus != AiRecognitionStatus.failed) {
-      context.push('/meal-view?id=${widget.meal.id}');
-      return;
-    }
-    _singleTapTimer?.cancel();
-    _singleTapTimer = Timer(const Duration(milliseconds: 350), () {
-      if (mounted) context.push('/meal-view?id=${widget.meal.id}');
-    });
-  }
-
-  void _onDoubleTap() {
-    _singleTapTimer?.cancel();
     final meal = widget.meal;
-    final position = _doubleTapPosition;
+    final position = _tapPosition;
     final renderObject =
         _thumbnailKey.currentContext?.findRenderObject() as RenderBox?;
     if (meal.aiRecognitionStatus == AiRecognitionStatus.failed &&
@@ -264,7 +245,7 @@ class _MealItemState extends State<_MealItem> {
         return;
       }
     }
-    if (mounted) context.push('/meal-view?id=${meal.id}');
+    context.push('/meal-view?id=${meal.id}');
   }
 
   @override
@@ -275,21 +256,22 @@ class _MealItemState extends State<_MealItem> {
     final meal = widget.meal;
     final ingredientNames = meal.foodItems.map((i) => i.name).toList();
     final categoryText = switch (meal.aiRecognitionStatus) {
-      AiRecognitionStatus.processing => 'AI 正在识别食物…',
-      AiRecognitionStatus.failed => '识别失败，双击图片重试',
+      AiRecognitionStatus.processing => context.l10n.mealSectionRecognizing,
+      AiRecognitionStatus.failed => context.l10n.mealSectionRecognitionFailed,
       _ =>
         ingredientNames.isEmpty
-            ? meal.mealType.label
+            ? mealTypeLabel(context.l10n, meal.mealType)
             : ingredientNames.length <= 3
             ? ingredientNames.join(' · ')
-            : '${ingredientNames.take(3).join(' · ')} 等',
+            : context.l10n.mealSectionMoreFoods(
+                ingredientNames.take(3).join(' · '),
+              ),
     };
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: _onTap,
-      onDoubleTapDown: (details) => _doubleTapPosition = details.globalPosition,
-      onDoubleTap: _onDoubleTap,
+      onTapDown: (details) => _tapPosition = details.globalPosition,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Row(
@@ -353,7 +335,9 @@ class _MealItemState extends State<_MealItem> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '约${meal.totalWeightG.round()}g',
+                  context.l10n.mealSectionApproxGrams(
+                    '${meal.totalWeightG.round()}',
+                  ),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.outline,
                   ),

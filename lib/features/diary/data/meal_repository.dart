@@ -19,7 +19,15 @@ class MealRepository {
     int mealId, {
     required AiRecognitionStatus status,
     LlmRecognitionResult? result,
-  }) => _dao.updateAiRecognition(mealId, status: status, result: result);
+    String? processingName,
+    String? failedName,
+  }) => _dao.updateAiRecognition(
+    mealId,
+    status: status,
+    result: result,
+    processingName: processingName,
+    failedName: failedName,
+  );
   Future<void> softDeleteMeal(int id) => _dao.softDeleteMeal(id);
   Future<void> restoreMeal(int id) => _dao.restoreMeal(id);
   Future<void> hardDeleteMeal(int id) => _dao.hardDeleteMeal(id);

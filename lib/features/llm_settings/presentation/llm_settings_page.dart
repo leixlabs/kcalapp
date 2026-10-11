@@ -1,11 +1,17 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../../data/llm/llm_adapter.dart';
+import '../../../app/app_language.dart';
 import '../domain/llm_profile.dart';
 import '../../../app/providers.dart';
 import '../../../core/widgets/states.dart';
+import '../../../l10n/l10n.dart';
+import '../../../data/database/app_settings_dao.dart';
 
 class LlmSettingsPage extends ConsumerStatefulWidget {
   const LlmSettingsPage({super.key});
@@ -36,26 +42,48 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
+    final language = ref.watch(appLanguageProvider);
     if (_isLoading) {
       return Scaffold(
-        appBar: AppBar(title: const Text('设置')),
+        appBar: AppBar(title: Text(l10n.llmSettingsTitle)),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('设置')),
+      appBar: AppBar(title: Text(l10n.llmSettingsTitle)),
       body: ListView.builder(
         padding: const EdgeInsets.all(16),
-        itemCount: _profiles.length + 4,
+        itemCount: _profiles.length + 5,
         itemBuilder: (context, index) {
           if (index == 0) {
             return Card(
               margin: const EdgeInsets.only(bottom: 12),
               child: ListTile(
-                leading: const Icon(Icons.add_circle, color: Colors.green),
-                title: const Text('添加新配置'),
-                onTap: () => _showProfileForm(context),
+                leading: const Icon(Icons.language),
+                title: Text(l10n.appLanguageTitle),
+                trailing: DropdownButton<AppLanguage>(
+                  value: language,
+                  underline: const SizedBox.shrink(),
+                  items: [
+                    DropdownMenuItem(
+                      value: AppLanguage.system,
+                      child: Text(l10n.appLanguageSystem),
+                    ),
+                    DropdownMenuItem(
+                      value: AppLanguage.chinese,
+                      child: Text(l10n.appLanguageChinese),
+                    ),
+                    DropdownMenuItem(
+                      value: AppLanguage.english,
+                      child: Text(l10n.appLanguageEnglish),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) _changeLanguage(value);
+                  },
+                ),
               ),
             );
           }
@@ -63,14 +91,9 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
             return Card(
               margin: const EdgeInsets.only(bottom: 12),
               child: ListTile(
-                leading: const Icon(
-                  Icons.bug_report_outlined,
-                  color: Colors.deepOrange,
-                ),
-                title: const Text('HTTP 调试面板'),
-                subtitle: const Text('查看 LLM 请求 / 响应（alice）'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => ref.read(aliceProvider).showInspector(),
+                leading: const Icon(Icons.add_circle, color: Colors.green),
+                title: Text(l10n.llmSettingsAddProfile),
+                onTap: () => _showProfileForm(context),
               ),
             );
           }
@@ -78,25 +101,40 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
             return Card(
               margin: const EdgeInsets.only(bottom: 12),
               child: ListTile(
+                leading: const Icon(
+                  Icons.bug_report_outlined,
+                  color: Colors.deepOrange,
+                ),
+                title: Text(l10n.llmSettingsHttpDebug),
+                subtitle: Text(l10n.llmSettingsHttpDebugSubtitle),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => ref.read(aliceProvider).showInspector(),
+              ),
+            );
+          }
+          if (index == 3) {
+            return Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: ListTile(
                 leading: const Icon(Icons.wifi_tethering),
-                title: const Text('局域网只读 API'),
-                subtitle: const Text('在本地网络中读取餐食和目标数据'),
+                title: Text(l10n.llmSettingsLanApi),
+                subtitle: Text(l10n.llmSettingsLanApiSubtitle),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push('/lan-api'),
               ),
             );
           }
-          if (index == 3) {
+          if (index == 4) {
             if (_profiles.isEmpty) {
-              return const EmptyState(
+              return EmptyState(
                 icon: Icons.cloud_off,
-                title: '暂无配置',
-                subtitle: '添加 LLM 服务后即可使用拍照识别功能',
+                title: l10n.llmSettingsEmptyTitle,
+                subtitle: l10n.llmSettingsEmptySubtitle,
               );
             }
             return const SizedBox.shrink();
           }
-          final profile = _profiles[index - 4];
+          final profile = _profiles[index - 5];
           return Card(
             margin: const EdgeInsets.only(bottom: 12),
             child: ListTile(
@@ -134,6 +172,23 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
         },
       ),
     );
+  }
+
+  Future<void> _changeLanguage(AppLanguage language) async {
+    try {
+      await AppSettingsDao(ref.read(databaseProvider))
+          .setValue('app_language', language.storageValue);
+      if (!mounted) return;
+      Intl.defaultLocale = language
+          .resolveLocale(PlatformDispatcher.instance.locale)
+          .languageCode;
+      ref.read(appLanguageProvider.notifier).state = language;
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.appLanguageSaveFailed('$error'))),
+      );
+    }
   }
 
   void _showProfileForm(BuildContext context, {LlmProfile? profile}) {
@@ -187,8 +242,9 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
     if (name.text.trim().isEmpty ||
         url.text.trim().isEmpty ||
         model.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('请填写所有必填字段')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.llmSettingsFillAll)));
       return;
     }
 
@@ -236,15 +292,16 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
   }
 
   void _confirmDelete(LlmProfile profile) {
+    final l10n = context.l10n;
     showDialog(
       context: context,
       builder: (dialogCtx) => AlertDialog(
-        title: const Text('删除配置'),
-        content: Text('确定删除配置「${profile.displayName}」？其 API Key 也会一并移除。'),
+        title: Text(l10n.llmSettingsDeleteTitle),
+        content: Text(l10n.llmSettingsDeleteConfirm(profile.displayName)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogCtx),
-            child: const Text('取消'),
+            child: Text(l10n.actionCancel),
           ),
           TextButton(
             onPressed: () async {
@@ -258,7 +315,7 @@ class _LlmSettingsPageState extends ConsumerState<LlmSettingsPage> {
                 _loadProfiles();
               }
             },
-            child: const Text('删除'),
+            child: Text(l10n.actionDelete),
           ),
         ],
       ),
@@ -311,6 +368,7 @@ class _ProfileFormState extends State<_ProfileForm> {
 
   Future<void> _handleValidate() async {
     if (_validating) return;
+    final l10n = context.l10n;
     setState(() {
       _validating = true;
       _validationMessage = null;
@@ -327,7 +385,7 @@ class _ProfileFormState extends State<_ProfileForm> {
       if (name.text.trim().isEmpty ||
           url.text.trim().isEmpty ||
           model.text.trim().isEmpty) {
-        _showResult('请先填写名称、Base URL 和模型名', success: false);
+        _showResult(l10n.llmSettingsFillNameUrlModel, success: false);
         return;
       }
 
@@ -338,7 +396,7 @@ class _ProfileFormState extends State<_ProfileForm> {
                 : null);
 
       if (apiKey == null || apiKey.isEmpty) {
-        _showResult('请填写 API Key', success: false);
+        _showResult(l10n.llmSettingsFillApiKey, success: false);
         return;
       }
 
@@ -358,18 +416,23 @@ class _ProfileFormState extends State<_ProfileForm> {
         await ref
             .read(llmAdapterProvider)
             .testConnection(profile: testProfile, apiKey: apiKey);
-        _showResult('连通正常', success: true);
+        _showResult(l10n.llmSettingsConnectionOk, success: true);
       } on LlmConnectionFailure catch (failure) {
-        final message = _connectionErrorMessage(failure.error);
+        final message = _connectionErrorMessage(l10n, failure.error);
         final detail = failure.detail;
         _showResult(
-          detail == null ? '验证失败：$message' : '验证失败：$message（$detail）',
+          detail == null
+              ? l10n.llmSettingsValidateFailed(message)
+              : l10n.llmSettingsValidateFailedDetail(message, detail),
           success: false,
         );
       } on LlmConnectionError catch (e) {
-        _showResult('验证失败：${_connectionErrorMessage(e)}', success: false);
+        _showResult(
+          l10n.llmSettingsValidateFailed(_connectionErrorMessage(l10n, e)),
+          success: false,
+        );
       } catch (e) {
-        _showResult('验证失败，请检查配置、网络或服务响应', success: false);
+        _showResult(l10n.llmSettingsValidateFailedGeneric, success: false);
       }
     } finally {
       if (mounted) setState(() => _validating = false);
@@ -384,34 +447,34 @@ class _ProfileFormState extends State<_ProfileForm> {
     });
   }
 
-  String _connectionErrorMessage(LlmConnectionError e) {
+  String _connectionErrorMessage(AppLocalizations l10n, LlmConnectionError e) {
     switch (e) {
       case LlmConnectionError.timeout:
-        return '连接超时，请检查 Base URL 或网络';
+        return l10n.llmErrorTimeout;
       case LlmConnectionError.unauthorized:
-        return '鉴权失败：API Key 无效或权限不足';
+        return l10n.llmErrorUnauthorized;
       case LlmConnectionError.rateLimited:
-        return '请求过于频繁，被限流';
+        return l10n.llmErrorRateLimited;
       case LlmConnectionError.serverError:
-        return 'LLM 服务端错误（5xx）';
+        return l10n.llmErrorServer;
       case LlmConnectionError.parseError:
-        return '响应解析失败';
+        return l10n.llmErrorParse;
       case LlmConnectionError.unknown:
-        return '验证失败，请检查 Base URL、API Key 和服务状态';
+        return l10n.llmErrorUnknown;
       case LlmConnectionError.invalidResponse:
-        return '服务未返回有效内容，请检查模型和接口是否兼容';
+        return l10n.llmErrorInvalidResponse;
       case LlmConnectionError.responseFormatUnsupported:
         return switch (_responseFormat) {
-          LlmResponseFormat.jsonSchema =>
-            '服务不支持 JSON Schema，请改用 JSON Mode 或关闭结构化输出',
-          LlmResponseFormat.jsonMode => '服务不支持 JSON Mode，请关闭结构化输出或更换模型',
-          LlmResponseFormat.none => '服务拒绝了请求，请检查模型配置',
+          LlmResponseFormat.jsonSchema => l10n.llmErrorFormatUnsupportedSchema,
+          LlmResponseFormat.jsonMode => l10n.llmErrorFormatUnsupportedJsonMode,
+          LlmResponseFormat.none => l10n.llmErrorFormatUnsupportedNone,
         };
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -425,13 +488,17 @@ class _ProfileFormState extends State<_ProfileForm> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              widget.isEditing ? '编辑配置' : '添加配置',
+              widget.isEditing
+                  ? l10n.llmSettingsEditProfile
+                  : l10n.llmSettingsAddProfileTitle,
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 24),
             TextField(
               controller: widget.nameCtrl,
-              decoration: const InputDecoration(labelText: '服务名称'),
+              decoration: InputDecoration(
+                labelText: l10n.llmSettingsServiceName,
+              ),
             ),
             const SizedBox(height: 20),
             TextField(
@@ -444,8 +511,8 @@ class _ProfileFormState extends State<_ProfileForm> {
             const SizedBox(height: 20),
             TextField(
               controller: widget.modelCtrl,
-              decoration: const InputDecoration(
-                labelText: '模型名',
+              decoration: InputDecoration(
+                labelText: l10n.llmSettingsModelName,
                 hintText: 'gpt-4o',
               ),
             ),
@@ -454,7 +521,9 @@ class _ProfileFormState extends State<_ProfileForm> {
               controller: widget.keyCtrl,
               decoration: InputDecoration(
                 labelText: 'API Key',
-                hintText: widget.isEditing ? '留空则不更新' : 'sk-...',
+                hintText: widget.isEditing
+                    ? l10n.llmSettingsLeaveBlank
+                    : l10n.llmSettingsKeyHint,
                 prefixIcon: const Icon(Icons.key),
               ),
               obscureText: true,
@@ -462,21 +531,21 @@ class _ProfileFormState extends State<_ProfileForm> {
             const SizedBox(height: 20),
             TextField(
               controller: widget.timeoutCtrl,
-              decoration: const InputDecoration(labelText: '超时（秒）'),
+              decoration: InputDecoration(labelText: l10n.llmSettingsTimeout),
               keyboardType: TextInputType.number,
             ),
             const SizedBox(height: 20),
             DropdownButtonFormField<LlmResponseFormat>(
               initialValue: _responseFormat,
-              decoration: const InputDecoration(
-                labelText: '结构化输出格式',
-                prefixIcon: Icon(Icons.data_object),
+              decoration: InputDecoration(
+                labelText: l10n.llmSettingsResponseFormat,
+                prefixIcon: const Icon(Icons.data_object),
               ),
               items: LlmResponseFormat.values
                   .map(
                     (format) => DropdownMenuItem(
                       value: format,
-                      child: Text(format.label),
+                      child: Text(responseFormatLabel(l10n, format)),
                     ),
                   )
                   .toList(),
@@ -491,11 +560,10 @@ class _ProfileFormState extends State<_ProfileForm> {
             const SizedBox(height: 8),
             Text(
               switch (_responseFormat) {
-                LlmResponseFormat.none =>
-                  '不发送 response_format，模型可能返回非 JSON 文本。',
-                LlmResponseFormat.jsonMode => '使用 response_format: json_object。适用于支持 JSON Mode 但不支持 JSON Schema 的服务。',
+                LlmResponseFormat.none => l10n.llmSettingsFormatNone,
+                LlmResponseFormat.jsonMode => l10n.llmSettingsFormatJsonMode,
                 LlmResponseFormat.jsonSchema =>
-                  '使用 response_format: json_schema，按餐食识别结构约束输出。',
+                  l10n.llmSettingsFormatJsonSchema,
               },
               style: Theme.of(context).textTheme.bodySmall
                   ?.copyWith(color: Theme.of(context).colorScheme.outline),
@@ -559,7 +627,7 @@ class _ProfileFormState extends State<_ProfileForm> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.wifi_protected_setup),
-                  label: const Text('验证连通性'),
+                  label: Text(l10n.llmSettingsValidateConnection),
                 ),
                 Row(
                   children: [
@@ -567,14 +635,16 @@ class _ProfileFormState extends State<_ProfileForm> {
                       onPressed: _validating
                           ? null
                           : () => Navigator.pop(context),
-                      child: const Text('取消'),
+                      child: Text(l10n.actionCancel),
                     ),
                     const SizedBox(width: 8),
                     FilledButton(
                       onPressed: _validating
                           ? null
                           : () => widget.onSave(_responseFormat),
-                      child: Text(widget.isEditing ? '更新' : '保存'),
+                      child: Text(
+                        widget.isEditing ? l10n.actionUpdate : l10n.actionSave,
+                      ),
                     ),
                   ],
                 ),

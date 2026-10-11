@@ -1,6 +1,7 @@
 import 'package:alice/alice.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'app_language.dart';
 import '../data/database/database.dart';
 import '../features/diary/data/meal_dao.dart';
 import '../features/diary/data/meal_repository.dart';
@@ -91,3 +92,7 @@ final llmAdapterProvider = Provider<LlmAdapter>((ref) {
 
 /// 出站请求的 `User-Agent`；`main()` 会用真实包版本覆盖它。
 final userAgentProvider = Provider<String>((ref) => AppUserAgent.current());
+
+final appLanguageProvider = StateProvider<AppLanguage>(
+  (ref) => AppLanguage.system,
+);

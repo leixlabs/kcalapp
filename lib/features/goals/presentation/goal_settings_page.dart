@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../diary/application/diary_providers.dart';
 import '../../diary/domain/daily_goal.dart';
 import '../../../app/providers.dart';
+import '../../../l10n/l10n.dart';
 
 class GoalSettingsPage extends ConsumerStatefulWidget {
   const GoalSettingsPage({super.key});
@@ -59,7 +60,7 @@ class _GoalSettingsPageState extends ConsumerState<GoalSettingsPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('目标设置')),
+      appBar: AppBar(title: Text(context.l10n.goalsTitle)),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -71,29 +72,29 @@ class _GoalSettingsPageState extends ConsumerState<GoalSettingsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('每日热量与营养素目标', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+                    Text(context.l10n.goalsDailySection, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
                     const SizedBox(height: 12),
                     TextField(
                       controller: _kcalController,
-                      decoration: const InputDecoration(labelText: '热量目标 (kcal)', prefixIcon: Icon(Icons.local_fire_department)),
+                      decoration: InputDecoration(labelText: context.l10n.goalsCalorieTarget, prefixIcon: const Icon(Icons.local_fire_department)),
                       keyboardType: TextInputType.number,
                     ),
                     const SizedBox(height: 12),
                     TextField(
                       controller: _carbsController,
-                      decoration: const InputDecoration(labelText: '碳水 (g)', prefixIcon: Icon(Icons.grain)),
+                      decoration: InputDecoration(labelText: context.l10n.goalsCarbsTarget, prefixIcon: const Icon(Icons.grain)),
                       keyboardType: TextInputType.number,
                     ),
                     const SizedBox(height: 12),
                     TextField(
                       controller: _proteinController,
-                      decoration: const InputDecoration(labelText: '蛋白质 (g)', prefixIcon: Icon(Icons.fitness_center)),
+                      decoration: InputDecoration(labelText: context.l10n.goalsProteinTarget, prefixIcon: const Icon(Icons.fitness_center)),
                       keyboardType: TextInputType.number,
                     ),
                     const SizedBox(height: 12),
                     TextField(
                       controller: _fatController,
-                      decoration: const InputDecoration(labelText: '脂肪 (g)', prefixIcon: Icon(Icons.water_drop)),
+                      decoration: InputDecoration(labelText: context.l10n.goalsFatTarget, prefixIcon: const Icon(Icons.water_drop)),
                       keyboardType: TextInputType.number,
                     ),
                   ],
@@ -103,7 +104,7 @@ class _GoalSettingsPageState extends ConsumerState<GoalSettingsPage> {
             const SizedBox(height: 16),
             FilledButton.tonal(
               onPressed: _resetToDefaults,
-              child: const Text('恢复推荐默认值'),
+              child: Text(context.l10n.goalsResetDefaults),
             ),
             const SizedBox(height: 16),
             Card(
@@ -115,7 +116,7 @@ class _GoalSettingsPageState extends ConsumerState<GoalSettingsPage> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        '目标自设置日起生效，不会覆盖过去日期的历史统计。',
+                        context.l10n.goalsNote,
                         style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
                       ),
                     ),
@@ -131,7 +132,7 @@ class _GoalSettingsPageState extends ConsumerState<GoalSettingsPage> {
           padding: const EdgeInsets.all(16),
           child: FilledButton(
             onPressed: _saveGoal,
-            child: const Text('保存目标'),
+            child: Text(context.l10n.goalsSave),
           ),
         ),
       ),
@@ -154,11 +155,11 @@ class _GoalSettingsPageState extends ConsumerState<GoalSettingsPage> {
     final fat = double.tryParse(_fatController.text);
 
     if (kcal == null || kcal <= 0 || kcal > 10000) {
-      _showError('请输入有效的热量值 (1-10000)');
+      _showError(context.l10n.goalsInvalidKcal);
       return;
     }
     if (carbs == null || carbs < 0 || protein == null || protein < 0 || fat == null || fat < 0) {
-      _showError('营养素不能为负数');
+      _showError(context.l10n.goalsNegativeNutrient);
       return;
     }
 

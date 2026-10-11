@@ -1,0 +1,16 @@
+/* InfoPlist.strings — English (Base development language also falls back here). */
+
+/* App name shown on the Home screen and in system prompts. */
+"CFBundleDisplayName" = "Calory";
+
+/* Camera — used to photograph meals for calorie/nutrition recognition. */
+"NSCameraUsageDescription" = "Calory uses the camera to photograph your meals and estimate their calories and nutrition.";
+
+/* Local Network — the read-only LAN data API. */
+"NSLocalNetworkUsageDescription" = "Calory exposes a read-only meal-data API to devices you authorize on your local network.";
+
+/* Photo Library (read) — picking an existing meal photo. */
+"NSPhotoLibraryUsageDescription" = "Calory needs access to your photo library so you can pick a meal photo to analyze.";
+
+/* Photo Library (add) — saving meal photos back to the library. */
+"NSPhotoLibraryAddUsageDescription" = "Calory saves your meal photos to your photo library.";

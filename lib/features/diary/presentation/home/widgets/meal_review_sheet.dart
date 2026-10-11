@@ -6,6 +6,7 @@ import '../../../application/meal_review_controller.dart';
 import '../../../domain/meal.dart';
 import '../../../domain/meal_review.dart';
 import '../../../domain/meal_type.dart';
+import '../../../../../l10n/l10n.dart';
 
 /// 展示某个餐次的完整营养评价与组成食物。
 Future<void> showMealReviewSheet(
@@ -57,9 +58,9 @@ class MealReviewSheet extends ConsumerWidget {
           children: [
             _buildHeader(context, ref, review, foodCount, totalKcal),
             const SizedBox(height: 12),
-            _buildReviewBody(theme, review, foodCount),
+            _buildReviewBody(context, theme, review, foodCount),
             const SizedBox(height: 20),
-            _buildFoods(theme),
+            _buildFoods(context, theme),
             const SizedBox(height: 20),
             _buildFooter(context, ref, review),
           ],
@@ -86,14 +87,19 @@ class MealReviewSheet extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '${mealType.label}营养评价',
+                context.l10n.mealReviewSheetTitle(
+                  mealTypeLabel(context.l10n, mealType),
+                ),
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
-                '共 ${totalKcal.round()} kcal · $foodCount 项食物',
+                context.l10n.mealReviewTotalLine(
+                  totalKcal.round().toString(),
+                  foodCount,
+                ),
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.outline,
                 ),
@@ -102,7 +108,7 @@ class MealReviewSheet extends ConsumerWidget {
           ),
         ),
         Text(
-          'AI 生成',
+          context.l10n.mealReviewGeneratedByAi,
           style: theme.textTheme.labelSmall?.copyWith(
             color: theme.colorScheme.outline,
           ),
@@ -111,7 +117,12 @@ class MealReviewSheet extends ConsumerWidget {
     );
   }
 
-  Widget _buildReviewBody(ThemeData theme, MealReview? review, int foodCount) {
+  Widget _buildReviewBody(
+    BuildContext context,
+    ThemeData theme,
+    MealReview? review,
+    int foodCount,
+  ) {
     final content = review?.content;
     final status = review?.status;
 
@@ -119,14 +130,22 @@ class MealReviewSheet extends ConsumerWidget {
       return _statusBox(
         theme,
         icon: Icons.sync,
-        text: content ?? '正在根据 $foodCount 项食物更新评价…',
+        text: content ?? context.l10n.mealReviewUpdating(foodCount),
       );
     }
     if (status == MealReviewStatus.failed && content == null) {
-      return _statusBox(theme, icon: Icons.error_outline, text: '评价生成失败');
+      return _statusBox(
+        theme,
+        icon: Icons.error_outline,
+        text: context.l10n.mealReviewFailed,
+      );
     }
     if (content == null || content.isEmpty) {
-      return _statusBox(theme, icon: Icons.auto_awesome, text: '暂未生成评价');
+      return _statusBox(
+        theme,
+        icon: Icons.auto_awesome,
+        text: context.l10n.mealReviewEmpty,
+      );
     }
 
     return Container(
@@ -172,7 +191,7 @@ class MealReviewSheet extends ConsumerWidget {
     );
   }
 
-  Widget _buildFoods(ThemeData theme) {
+  Widget _buildFoods(BuildContext context, ThemeData theme) {
     final foods = <Widget>[];
     for (final meal in meals) {
       for (final item in meal.foodItems) {
@@ -205,7 +224,7 @@ class MealReviewSheet extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '组成食物',
+          context.l10n.mealReviewComposingFoods,
           style: theme.textTheme.titleSmall?.copyWith(
             fontWeight: FontWeight.w700,
           ),
@@ -232,10 +251,12 @@ class MealReviewSheet extends ConsumerWidget {
         Expanded(
           child: FilledButton.tonalIcon(
             onPressed: () {
-              ref.read(mealReviewControllerProvider).refresh(date, mealType);
+              ref
+                  .read(mealReviewControllerProvider)
+                  .refresh(date, mealType, context.l10n);
             },
             icon: const Icon(Icons.refresh, size: 18),
-            label: const Text('重新生成'),
+            label: Text(context.l10n.mealReviewRegenerate),
           ),
         ),
       ],

@@ -12,6 +12,7 @@ import '../../application/diary_providers.dart';
 import '../../../../core/utils/format_utils.dart';
 import '../../../../core/widgets/states.dart';
 import '../../../../core/widgets/tap_delight.dart';
+import '../../../../l10n/l10n.dart';
 import 'widgets/calorie_ring.dart';
 import 'widgets/meal_section.dart';
 import '../../domain/daily_goal.dart';
@@ -50,7 +51,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         child: summaryAsync.when(
           loading: () => const LoadingView(),
           error: (e, _) => ErrorStateView(
-            message: '加载失败: $e',
+            message: context.l10n.homeErrorGeneric('$e'),
             onRetry: () => ref.invalidate(dailySummaryProvider),
           ),
           data: (summary) => CustomScrollView(
@@ -108,8 +109,10 @@ class _HomePageState extends ConsumerState<HomePage> {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Text(
                     isToday
-                        ? '今日饮食记录'
-                        : '${FormatUtils.formatDateShort(selectedDate)}饮食记录',
+                        ? context.l10n.homeTodayRecords
+                        : context.l10n.homeDateRecords(
+                            FormatUtils.formatDateShort(selectedDate),
+                          ),
                     style: Theme.of(context).textTheme.titleMedium
                         ?.copyWith(fontWeight: FontWeight.w700),
                   ),
@@ -128,7 +131,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         child: FloatingActionButton.extended(
           onPressed: () => _takePhotoAndAnalyze(context, ref),
           icon: const Icon(Icons.camera_alt),
-          label: const Text('拍照识别热量'),
+          label: Text(context.l10n.homeTakePhoto),
           backgroundColor: Theme.of(context).colorScheme.primary,
           foregroundColor: Colors.white,
         ),
@@ -158,7 +161,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                   });
                 },
                 child: Semantics(
-                  label: '选择日期',
+                  label: context.l10n.homeSelectDate,
                   button: true,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
@@ -201,7 +204,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 borderRadius: BorderRadius.circular(20),
                 onTap: () => context.push('/llm-settings'),
                 child: Semantics(
-                  label: '设置',
+                  label: context.l10n.llmSettingsTitle,
                   button: true,
                   child: CircleAvatar(
                     radius: 18,
@@ -239,7 +242,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    '今日热量',
+                    context.l10n.homeTodayCalories,
                     style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
@@ -263,8 +266,10 @@ class _HomePageState extends ConsumerState<HomePage> {
                         children: [
                           Text(
                             hasGoal
-                                ? '目标 ${summary.target!.kcal.round()}'
-                                : '设置目标',
+                                ? context.l10n.homeGoalValue(
+                                    '${summary.target!.kcal.round()}',
+                                  )
+                                : context.l10n.homeSetGoal,
                             style: theme.textTheme.labelMedium?.copyWith(
                               color: theme.colorScheme.onPrimaryContainer,
                               fontWeight: FontWeight.w700,
@@ -317,7 +322,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       children: [
         _buildMacroItem(
           context: context,
-          label: '碳水',
+          label: context.l10n.macroCarbs,
           consumed: summary.consumed.carbsG,
           target: summary.target?.carbsG,
           color: AppColors.carbs,
@@ -327,7 +332,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         const SizedBox(width: 12),
         _buildMacroItem(
           context: context,
-          label: '蛋白质',
+          label: context.l10n.macroProtein,
           consumed: summary.consumed.proteinG,
           target: summary.target?.proteinG,
           color: AppColors.protein,
@@ -337,7 +342,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         const SizedBox(width: 12),
         _buildMacroItem(
           context: context,
-          label: '脂肪',
+          label: context.l10n.macroFat,
           consumed: summary.consumed.fatG,
           target: summary.target?.fatG,
           color: AppColors.fat,
@@ -376,7 +381,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '今日营养素进度',
+                    context.l10n.homeMacroProgress,
                     style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
@@ -397,7 +402,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 color: theme.colorScheme.primary,
               ),
               title: Text(
-                '食物类别 · 本周',
+                context.l10n.homeFoodCategoriesThisWeek,
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
@@ -418,7 +423,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                   error: (error, _) => Padding(
                     padding: const EdgeInsets.only(top: 8),
                     child: Text(
-                      '本周食物类别加载失败：$error',
+                      context.l10n.homeWeeklyCategoryError('$error'),
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.error,
                       ),
@@ -444,7 +449,7 @@ class _HomePageState extends ConsumerState<HomePage> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('本周总结'),
+                  Text(context.l10n.homeWeeklySummary),
                   const SizedBox(width: 4),
                   Icon(
                     Icons.arrow_forward,
@@ -532,8 +537,10 @@ class _HomePageState extends ConsumerState<HomePage> {
               const SizedBox(height: 2),
               Text(
                 hasTarget
-                    ? '目标 ${FormatUtils.formatGramValue(target)} g'
-                    : '未设目标',
+                    ? context.l10n.homeGoalCalories(
+                        FormatUtils.formatGramValue(target),
+                      )
+                    : context.l10n.homeNoGoal,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.labelSmall?.copyWith(
@@ -611,8 +618,10 @@ class _HomePageState extends ConsumerState<HomePage> {
         SliverToBoxAdapter(
           child: EmptyState(
             icon: Icons.restaurant_menu,
-            title: FormatUtils.isToday(selectedDate) ? '今日暂无饮食记录' : '该日暂无饮食记录',
-            subtitle: '点击右下角按钮拍照识别，添加一条饮食记录',
+            title: FormatUtils.isToday(selectedDate)
+                ? context.l10n.homeNoRecordsToday
+                : context.l10n.homeNoRecordsDay,
+            subtitle: context.l10n.homeEmptyHint,
           ),
         ),
       );
@@ -644,6 +653,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     String photoPath,
     MealType mealType,
   ) async {
+    final l10n = context.l10n;
     final messenger = ScaffoldMessenger.of(context);
     try {
       // 自动保存进系统相册，仅持久化资源 id；沙盒内不再保留副本。
@@ -657,7 +667,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             Meal(
               dateTime: now,
               mealType: mealType,
-              name: 'AI 识别中',
+              name: l10n.mealDbRecognizing,
               photoAssetId: assetId,
               photoPath: assetId == null ? photoPath : null,
               source: 'ai',
@@ -680,7 +690,9 @@ class _HomePageState extends ConsumerState<HomePage> {
       );
     } catch (e) {
       if (messenger.mounted) {
-        messenger.showSnackBar(SnackBar(content: Text('保存饮食记录失败：$e')));
+        messenger.showSnackBar(
+          SnackBar(content: Text(l10n.homeSaveMealFailed('$e'))),
+        );
       }
     }
   }
@@ -693,17 +705,19 @@ class _HomePageState extends ConsumerState<HomePage> {
     String? photoPath,
     MealType mealType,
   ) async {
+    final l10n = context.l10n;
     try {
       await controller.recognizeSavedMeal(
         mealId,
         photoAssetId: photoAssetId,
         photoPath: photoPath,
         mealType: mealType,
+        l10n: l10n,
       );
     } catch (e) {
       if (messenger.mounted) {
         messenger.showSnackBar(
-          const SnackBar(content: Text('AI 识别失败，记录已保留，可双击图片重试')),
+          SnackBar(content: Text(l10n.homeRecognitionFailedHint)),
         );
       }
     }
@@ -727,7 +741,15 @@ class _WeekDatePicker extends StatelessWidget {
     this.goalKcal = 0,
   });
 
-  static const _weekLabels = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+  List<String> _weekLabels(BuildContext context) => [
+    context.l10n.weekdayMon,
+    context.l10n.weekdayTue,
+    context.l10n.weekdayWed,
+    context.l10n.weekdayThu,
+    context.l10n.weekdayFri,
+    context.l10n.weekdaySat,
+    context.l10n.weekdaySun,
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -747,7 +769,7 @@ class _WeekDatePicker extends StatelessWidget {
           final dayKey = DateTime(day.year, day.month, day.day);
           final kcal = kcalByDay[dayKey] ?? 0;
           return _WeekDayCell(
-            weekdayLabel: _weekLabels[i],
+            weekdayLabel: _weekLabels(context)[i],
             day: day,
             kcal: kcal,
             heat: _dayHeatFor(context, kcal, goalKcal),
@@ -901,8 +923,15 @@ class _WeekDayCellState extends State<_WeekDayCell>
       button: true,
       selected: widget.isSelected,
       label: widget.kcal > 0
-          ? '${widget.weekdayLabel}，${widget.day.day}日，${widget.kcal.round()}千卡'
-          : '${widget.weekdayLabel}，${widget.day.day}日，未记录',
+          ? context.l10n.weekdayDayKcal(
+              widget.weekdayLabel,
+              '${widget.day.day}',
+              '${widget.kcal.round()}',
+            )
+          : context.l10n.weekdayDayNoRecord(
+              widget.weekdayLabel,
+              '${widget.day.day}',
+            ),
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: _handleTap,

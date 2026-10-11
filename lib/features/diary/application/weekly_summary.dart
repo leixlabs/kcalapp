@@ -1,3 +1,5 @@
+import '../../../l10n/l10n.dart';
+import '../domain/category_labels.dart';
 import '../domain/food_category.dart';
 import '../domain/meal.dart';
 
@@ -93,42 +95,43 @@ class WeeklySummary {
     });
   }
 
-  static const Map<FoodCategory, String> _categoryPlainNames = {
-    FoodCategory.grains: '谷薯类',
-    FoodCategory.vegetablesAndFruits: '蔬菜水果',
-    FoodCategory.meatEggsAndSeafood: '肉蛋水产',
-    FoodCategory.dairyBeansAndNuts: '奶豆坚果',
-  };
-
   /// 无 AI 时的兜底描述：仅陈述记录到的天数、日均与占比最高的类别。
-  String get happenedSummary {
-    if (meals.isEmpty) return '这一周还没有饮食记录。';
-    final clauses = <String>['这一周记录了 $recordedDays 天'];
+  String happenedSummary(AppLocalizations l10n) {
+    if (meals.isEmpty) return l10n.weeklyNoRecords;
+    final separator = l10n.weeklyClauseSeparator;
+    final clauses = <String>[l10n.weeklyRecordedDays(recordedDays)];
     final average = averageKcalOnEstimatedDays;
-    if (average != null) clauses.add('日均约 ${average.round()} kcal');
+    if (average != null) {
+      clauses.add(l10n.weeklyDailyAvg(average.round().toString()));
+    }
     final grams = foodCategoryGrams;
     final present =
-        _categoryPlainNames.keys
+        FoodCategory.values
+            .where((category) => category != FoodCategory.other)
             .where((category) => (grams[category] ?? 0) > 0)
             .toList()
           ..sort((a, b) => (grams[b] ?? 0).compareTo(grams[a] ?? 0));
     if (present.isNotEmpty) {
-      clauses.add('${_categoryPlainNames[present.first]}相对较多');
+      clauses.add(
+        l10n.weeklyCategoryRelativelyHigh(
+          foodCategoryPlainName(l10n, present.first),
+        ),
+      );
     }
-    return '${clauses.join('，')}。';
+    return '${clauses.join(separator)}${l10n.weeklySentenceEnd}';
   }
 
-  String get nextWeekFocus {
+  String nextWeekFocus(AppLocalizations l10n) {
     final category = focusCategory;
     if (category == null) {
-      return '继续记录不同餐次，让下周回顾更贴近你的饮食。';
+      return l10n.weeklyKeepLogging;
     }
     return switch (category) {
-      FoodCategory.grains => '下周可以留意谷薯类主食的安排。',
-      FoodCategory.vegetablesAndFruits => '下周试着在午餐或晚餐加一份蔬菜。',
-      FoodCategory.meatEggsAndSeafood => '下周可以留意肉、蛋或水产的搭配。',
-      FoodCategory.dairyBeansAndNuts => '下周可以留意奶、豆或坚果的搭配。',
-      FoodCategory.other => '继续记录不同餐次，让下周回顾更贴近你的饮食。',
+      FoodCategory.grains => l10n.weeklyFocusGrains,
+      FoodCategory.vegetablesAndFruits => l10n.weeklyFocusVegetables,
+      FoodCategory.meatEggsAndSeafood => l10n.weeklyFocusMeat,
+      FoodCategory.dairyBeansAndNuts => l10n.weeklyFocusDairy,
+      FoodCategory.other => l10n.weeklyKeepLogging,
     };
   }
 

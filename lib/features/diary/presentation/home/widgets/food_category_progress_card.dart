@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../../l10n/l10n.dart';
+import '../../../domain/category_labels.dart';
 import '../../../domain/food_category.dart';
 
 /// 食物类别周进度。
@@ -50,7 +52,7 @@ class FoodCategoryProgressCard extends StatelessWidget {
         if (showNote) ...[
           const SizedBox(height: 12),
           Text(
-            '按食材名称和录入重量粗略归类；参考《中国居民膳食指南》成人日建议量折算为周目标，仅作饮食记录参考。',
+            context.l10n.foodCategoryNote,
             style: theme.textTheme.bodySmall?.copyWith(
               color: mutedColor ?? theme.colorScheme.outline,
             ),
@@ -93,7 +95,7 @@ class _CategoryProgressRow extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                category.label,
+                foodCategoryName(context.l10n, category),
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: labelColor,
                   fontWeight: FontWeight.w600,

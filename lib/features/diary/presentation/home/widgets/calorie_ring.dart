@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../../../../l10n/l10n.dart';
+
 class CalorieRing extends StatelessWidget {
   final double consumed;
   final double? target;
@@ -46,7 +48,7 @@ class CalorieRing extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  '已摄入',
+                  context.l10n.calorieRingConsumed,
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: theme.colorScheme.outline,
                   ),
