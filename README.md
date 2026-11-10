@@ -1,5 +1,8 @@
 # 食刻 / Calory
 
+> **上架状态**：iOS 版已上架 App Store（中国大陆区暂未提供）。
+> <!-- TODO: 补充 App Store 链接 -->
+
 本地 AI 食物热量记录 App。拍下餐食，App 将图片与用户配置的多模态 LLM 服务交互，生成可编辑的食材、估算重量、热量和三大营养素；用户确认后，记录汇入当日饮食与长期趋势。
 
 
@@ -64,6 +67,8 @@ flutter analyze
 ```
 
 ## 隐私设计
+
+隐私政策：<https://leix.dev/app/privacy/zh/calory>
 
 - 不建立应用账户、无自有业务服务器
 - API Key 仅写入系统安全存储（Keychain / Keystore）
