@@ -68,7 +68,7 @@ flutter analyze
 
 ## 隐私设计
 
-隐私政策：<https://leix.dev/app/privacy/zh/calory>
+隐私政策：<https://leix.dev/app/calory/privacy/zh>
 
 - 不建立应用账户、无自有业务服务器
 - API Key 仅写入系统安全存储（Keychain / Keystore）
