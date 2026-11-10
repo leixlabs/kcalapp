@@ -16,7 +16,7 @@ from appium.options.ios import XCUITestOptions
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SIM_APP_PATH = os.path.join(PROJECT_ROOT, "build", "ios", "iphonesimulator", "Runner.app")
 
-BUNDLE_ID = "com.calory.calory"
+BUNDLE_ID = os.environ.get("APP_BUNDLE_ID", "dev.leix.calory")
 APPIUM_SERVER = os.environ.get("APPIUM_SERVER", "http://127.0.0.1:4723")
 MOCK_BASE_URL = os.environ.get("MOCK_BASE_URL", "http://127.0.0.1:8611/v1")
 
