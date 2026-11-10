@@ -1,7 +1,7 @@
 name: calory
 description: "食刻 - 本地 AI 食物热量记录 App"
 publish_to: 'none'
-version: 0.1.0+1
+version: 1.0.0+1
 
 environment:
   sdk: ^3.13.4
